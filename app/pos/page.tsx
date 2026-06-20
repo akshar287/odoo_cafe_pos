@@ -105,9 +105,15 @@ export default function PosPage() {
 
   const loadOrders = useCallback(async (search = '') => {
     setOrdersLoading(true);
-    const data = await getSessionOrdersAction(search);
-    setOrders(data);
-    setOrdersLoading(false);
+    try {
+      const data = await getSessionOrdersAction(search);
+      setOrders(data || []);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
   }, []);
 
   useEffect(() => { 

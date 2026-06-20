@@ -6,6 +6,7 @@ import Table from '@/models/Table';
 import Customer from '@/models/Customer';
 import Employee from '@/models/Employee';
 import Product from '@/models/Product';
+import Session from '@/models/Session';
 import { getOrCreateCurrentEmployee } from './session';
 import { revalidatePath } from 'next/cache';
 import { publishKdsUpdate, publishTableUpdate } from '@/lib/realtime';
@@ -218,7 +219,7 @@ export async function createSelfOrderAction(input: Omit<SubmitOrderInput, 'table
 export async function getSessionOrdersAction(search = '') {
   try {
     await dbConnect();
-    const session = await (await import('@/models/Session')).default.findOne({ status: 'open' }).lean();
+    const session = await Session.findOne({ status: 'open' }).lean();
     const query: any = {};
     if (session) {
       query.createdAt = { $gte: (session as any).openedAt };
