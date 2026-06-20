@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const tables = await Table.find({ active: true })
       .populate('floor', 'name')
       .sort({ number: 1 })
-      .lean() as Record<string, unknown>[];
+      .lean() as unknown as Record<string, unknown>[];
 
     if (tables.length === 0) {
       return new NextResponse('No active tables found. Please create tables in the Booking section first.', {
