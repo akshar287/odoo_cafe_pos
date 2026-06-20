@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChefHat, CheckCircle2, Clock, PlayCircle, Search } from 'lucide-react';
 import { getPusherClient } from '@/lib/realtime';
+import { logoutAction } from '@/actions/auth';
 
 interface OrderItem {
   _id?: string;
@@ -118,6 +119,11 @@ export default function KDSPage() {
     return true;
   });
 
+  const handleSignOut = async () => {
+    await logoutAction();
+    window.location.href = '/sign-in';
+  };
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 flex flex-col font-mono">
       {/* KDS Header */}
@@ -153,6 +159,13 @@ export default function KDSPage() {
             className="w-full bg-slate-800 border border-slate-700 text-white pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:border-amber-500"
           />
         </div>
+
+        <button 
+          onClick={handleSignOut}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-xl border border-slate-700 transition-colors"
+        >
+          Log Out
+        </button>
       </header>
 
       {/* Main Grid */}

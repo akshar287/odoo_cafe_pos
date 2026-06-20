@@ -7,6 +7,7 @@ export interface IProduct extends Document {
   unitOfMeasure: string;
   tax: number;
   description?: string;
+  image?: string;
   isVeg: boolean;
   sendToKDS: boolean;
   archived: boolean;
@@ -22,6 +23,7 @@ const ProductSchema = new Schema<IProduct>(
     unitOfMeasure: { type: String, required: true },
     tax: { type: Number, default: 0, min: 0 },
     description: { type: String },
+    image: { type: String },
     isVeg: { type: Boolean, default: false },
     sendToKDS: { type: Boolean, default: true },
     archived: { type: Boolean, default: false },

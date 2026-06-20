@@ -15,7 +15,7 @@ interface Employee {
   name: string;
   email: string;
   role: 'admin' | 'cashier' | 'kitchen-staff';
-  clerkId: string;
+  username: string; // The Employee ID
   status: 'active' | 'disabled';
 }
 
@@ -26,13 +26,14 @@ export default function UserEmployeePage() {
   // New Employee modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [empName, setEmpName] = useState('');
-  const [empEmail, setEmpEmail] = useState('');
+  const [empUsername, setEmpUsername] = useState('');
+  const [empPassword, setEmpPassword] = useState('');
   const [empRole, setEmpRole] = useState<'cashier' | 'kitchen-staff'>('cashier');
   const [submitting, setSubmitting] = useState(false);
 
   // Generated Credentials display
   const [generatedCredentials, setGeneratedCredentials] = useState<{
-    email: string;
+    username: string;
     tempPassword: string;
   } | null>(null);
 
@@ -61,7 +62,7 @@ export default function UserEmployeePage() {
 
   const handleAddEmployeeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!empName.trim() || !empEmail.trim()) return;
+    if (!empName.trim() || !empUsername.trim()) return;
 
     setSubmitting(true);
     setMessage(null);
@@ -69,19 +70,21 @@ export default function UserEmployeePage() {
 
     const res = await createEmployeeAction({
       name: empName.trim(),
-      email: empEmail.trim(),
+      username: empUsername.trim(),
+      password: empPassword.trim(),
       role: empRole,
     });
 
     setSubmitting(false);
 
-    if (res.success && res.email && res.tempPassword) {
+    if (res.success && res.username && res.tempPassword) {
       setGeneratedCredentials({
-        email: res.email,
+        username: res.username!,
         tempPassword: res.tempPassword,
       });
       setEmpName('');
-      setEmpEmail('');
+      setEmpUsername('');
+      setEmpPassword('');
       loadEmployees();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create employee.' });
@@ -104,7 +107,7 @@ export default function UserEmployeePage() {
     if (!newPassword.trim() || !pwdTargetEmployee) return;
 
     setPwdSubmitting(true);
-    const res = await updateEmployeePasswordAction(pwdTargetEmployee.clerkId, newPassword.trim());
+    const res = await updateEmployeePasswordAction(pwdTargetEmployee._id, newPassword.trim());
     setPwdSubmitting(false);
 
     if (res.success) {
@@ -162,7 +165,7 @@ export default function UserEmployeePage() {
               <tr className="bg-muted/40 border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <th className="py-4 px-6">Staff Member</th>
                 <th className="py-4 px-6">Role Scope</th>
-                <th className="py-4 px-6">Clerk Profile ID</th>
+                <th className="py-4 px-6">Employee ID</th>
                 <th className="py-4 px-6">Status</th>
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
@@ -201,7 +204,6 @@ export default function UserEmployeePage() {
                     <td className="py-4 px-6">
                       <div className="flex flex-col gap-0.5">
                         <span className="font-bold text-foreground">{emp.name}</span>
-                        <span className="text-xs text-muted-foreground">{emp.email}</span>
                       </div>
                     </td>
                     <td className="py-4 px-6">
@@ -210,7 +212,7 @@ export default function UserEmployeePage() {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-muted-foreground select-all font-mono text-xs">
-                      {emp.clerkId}
+                      {emp.username}
                     </td>
                     <td className="py-4 px-6">
                       {emp.status === 'active' ? (
@@ -278,23 +280,22 @@ export default function UserEmployeePage() {
               </button>
             </div>
 
-            {/* Generated temporary credentials block */}
             {generatedCredentials ? (
               <div className="my-5 p-4 border border-green-500/20 bg-green-500/5 rounded-2xl flex flex-col gap-3">
                 <span className="text-sm font-semibold text-green-700 dark:text-green-400 flex items-center gap-1.5">
                   <CheckCircle className="h-4.5 w-4.5" />
-                  Account programmatically registered!
+                  Account successfully created!
                 </span>
                 <p className="text-xs text-muted-foreground">
-                  Give these credentials to the employee to sign in. The password will not be shown again.
+                  Give these credentials to the employee to sign in.
                 </p>
                 <div className="p-3 bg-background rounded-xl border border-border flex flex-col gap-1.5 font-mono text-sm">
                   <div>
-                    <span className="text-xs text-muted-foreground uppercase font-bold">Email/User ID:</span>
-                    <p className="font-semibold select-all">{generatedCredentials.email}</p>
+                    <span className="text-xs text-muted-foreground uppercase font-bold">Employee ID:</span>
+                    <p className="font-semibold select-all">{generatedCredentials.username}</p>
                   </div>
                   <div>
-                    <span className="text-xs text-muted-foreground uppercase font-bold">Temp Password:</span>
+                    <span className="text-xs text-muted-foreground uppercase font-bold">Password:</span>
                     <p className="font-semibold text-primary select-all">{generatedCredentials.tempPassword}</p>
                   </div>
                 </div>
@@ -320,13 +321,25 @@ export default function UserEmployeePage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-muted-foreground">Email Address</label>
+                  <label className="text-sm font-semibold text-muted-foreground">Employee ID (Username)</label>
                   <input
-                    type="email"
+                    type="text"
                     required
-                    placeholder="e.g. cashier@cafe.com"
-                    value={empEmail}
-                    onChange={(e) => setEmpEmail(e.target.value)}
+                    placeholder="e.g. cashier123"
+                    value={empUsername}
+                    onChange={(e) => setEmpUsername(e.target.value)}
+                    className="px-4 py-2 border border-border bg-background rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-semibold text-muted-foreground">Password</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. mysecretpassword"
+                    value={empPassword}
+                    onChange={(e) => setEmpPassword(e.target.value)}
                     className="px-4 py-2 border border-border bg-background rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>

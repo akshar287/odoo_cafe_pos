@@ -5,22 +5,22 @@ import Product from '@/models/Product';
 import Category from '@/models/Category';
 import { revalidatePath } from 'next/cache';
 import type { UserRole } from '@/types/clerk';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
 
-// Auth checker helper
+// Helper to ensure admin access
 async function requireAdmin() {
-  const { userId, sessionClaims } = await auth();
-  if (!userId) throw new Error('Unauthorized');
-  const role = (sessionClaims?.metadata as { role?: UserRole })?.role;
-  if (role !== 'admin') throw new Error('Forbidden: Admin access required');
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    throw new Error('Forbidden: Admin access required');
+  }
 }
 
 // CATEGORIES ACTIONS
 export async function getCategories() {
   try {
     await dbConnect();
-    // Sort by name or custom ordering if necessary, let's return all categories
-    return await Category.find({}).sort({ createdAt: 1 }).lean();
+    const categories = await Category.find({}).sort({ createdAt: 1 }).lean();
+    return JSON.parse(JSON.stringify(categories));
   } catch (err) {
     console.error('getCategories error:', err);
     return [];
@@ -137,6 +137,7 @@ export interface SaveProductInput {
   isVeg: boolean;
   sendToKDS: boolean;
   unitOfMeasure?: string;
+  image?: string;
 }
 
 export async function saveProductAction(input: SaveProductInput) {
@@ -166,6 +167,7 @@ export async function saveProductAction(input: SaveProductInput) {
       isVeg: input.isVeg,
       sendToKDS: input.sendToKDS,
       unitOfMeasure: input.unitOfMeasure || 'units',
+      image: input.image,
       archived: false,
     };
 

@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useClerk } from '@clerk/nextjs';
+import { usePathname, useRouter } from 'next/navigation';
+import { logoutAction } from '@/actions/auth';
 import {
   Coffee,
   Package,
@@ -33,17 +33,21 @@ const menuItems: SidebarItem[] = [
   { name: 'Booking', href: '/backend/booking', icon: Grid },
   { name: 'User/Employee', href: '/backend/user-employee', icon: Users },
   { name: 'Reports', href: '/backend/reports', icon: BarChart3 },
+  { name: 'Mobile Order', href: '/backend/settings/mobile-order', icon: MonitorPlay },
 ];
 
 export default function BackendLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { signOut } = useClerk();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleSignOut = () => {
-    signOut({ redirectUrl: '/sign-in' });
+  const handleSignOut = async () => {
+    await logoutAction();
+    router.push('/sign-in');
   };
+
+
 
   return (
     <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -137,16 +141,32 @@ export default function BackendLayout({ children }: { children: React.ReactNode 
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-x-hidden min-h-screen">
-        {/* Mobile top-bar */}
-        <div className="flex h-16 items-center border-b border-border bg-card px-4 lg:hidden">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <span className="ml-4 font-semibold text-foreground">Backend Layout</span>
-        </div>
+        {/* Top Header Bar */}
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4 md:px-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer lg:hidden"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <h1 className="font-bold text-lg text-foreground hidden sm:block">Admin Dashboard</h1>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex flex-col items-end mr-2">
+              <span className="text-sm font-bold leading-none text-foreground">Administrator</span>
+              <span className="text-xs text-muted-foreground mt-1">Full Access</span>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 rounded-xl bg-destructive/10 px-4 py-2 text-sm font-bold text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          </div>
+        </header>
 
         <main className="flex-1 bg-background">
           {children}

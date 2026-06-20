@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { getProducts, getCategories } from '@/actions/product';
+import { getFloorsAndTables } from '@/actions/booking';
 import { getPaymentMethods } from '@/actions/payment-method';
 import { getCustomers, createCustomerAction, createOrderAction, getActiveOrdersForTable } from '@/actions/order';
 import { getCoupons } from '@/actions/coupon';
@@ -19,7 +20,7 @@ import {
 } from 'lucide-react';
 import CheckoutModal from '@/components/CheckoutModal';
 
-interface Prod { _id: string; name: string; price: number; tax: number; isVeg: boolean; category: Cat | unknown; sendToKDS?: boolean; unitOfMeasure?: string; description?: string; }
+interface Prod { _id: string; name: string; price: number; tax: number; isVeg: boolean; category: Cat | unknown; sendToKDS?: boolean; unitOfMeasure?: string; description?: string; image?: string; }
 interface Cat { _id: string; name: string; color: string; }
 interface PayMeth { _id: string; name: string; type: string; upiId?: string; active: boolean; }
 interface Coup { _id: string; name: string; type: string; code: string; discountType: string; discountValue: number; minQty: number; minOrderAmount: number; active: boolean; }
@@ -55,6 +56,7 @@ export default function OrderViewPage() {
   const [paymentMethods, setPaymentMethods] = useState<PayMeth[]>([]);
   const [coupons, setCoupons] = useState<Coup[]>([]);
   const [session, setSession] = useState<Sess | null>(null);
+  const [tables, setTables] = useState<{ _id: string; number: string; }[]>([]);
 
   // Search & filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,11 +96,13 @@ export default function OrderViewPage() {
     const cats = await getCategories();
     const payM = await getPaymentMethods();
     const cps = await getCoupons();
+    const layout = await getFloorsAndTables();
 
     setProducts(prods.map((p: { _id: { toString: () => string }, category?: { _id: { toString: () => string } } }) => ({ ...p, _id: p._id.toString(), category: p.category ? { ...p.category, _id: p.category._id.toString() } : null })) as unknown as Prod[]);
     setCategories(cats.map((c: { _id: { toString: () => string } }) => ({ ...c, _id: c._id.toString() })) as unknown as Cat[]);
     setPaymentMethods(payM.filter((m) => m.active).map((m: { _id: { toString: () => string }, type: string }) => ({ ...m, _id: m._id.toString(), type: m.type as 'cash' | 'card' | 'upi' })) as unknown as PayMeth[]);
     setCoupons(cps.filter((c) => c.active).map((c: { _id: { toString: () => string }, type: string, discountType: string }) => ({ ...c, _id: c._id.toString(), type: c.type as 'coupon' | 'automated-product' | 'automated-order', discountType: c.discountType as 'percent' | 'fixed' })) as unknown as Coup[]);
+    setTables(layout.tables.map((t: { _id: { toString: () => string }; number: string; }) => ({ ...t, _id: t._id.toString() })));
 
     // Try loading existing draft order for this table
     const draft = await getActiveOrdersForTable(tableId);
@@ -462,25 +466,38 @@ export default function OrderViewPage() {
                   <button
                     key={prod._id}
                     onClick={() => addToCart(tableId, prod)}
-                    className="bg-card border border-border rounded-2xl p-3 flex flex-col gap-2 text-left cursor-pointer hover:border-primary/50 transition-colors shadow-xs group"
+                    className="bg-card border border-border rounded-2xl flex flex-col overflow-hidden text-left cursor-pointer hover:border-primary/50 transition-colors shadow-xs group"
                   >
-                    <div className="flex justify-between items-start">
+                    {/* Image Area */}
+                    <div className="h-28 bg-muted relative w-full border-b border-border flex items-center justify-center shrink-0">
+                      {prod.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={prod.image} alt={prod.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Coffee className="h-8 w-8 text-muted-foreground/30" />
+                      )}
+                      {/* Veg Indicator Absolute */}
                       <span
-                        className={`h-2.5 w-2.5 rounded-full shrink-0 ${
+                        className={`absolute top-2 left-2 h-3 w-3 rounded-full border-2 border-white shadow-sm ${
                           prod.isVeg ? 'bg-green-500' : 'bg-red-500'
                         }`}
                         title={prod.isVeg ? 'Veg' : 'Non-Veg'}
                       />
+                    </div>
+                    {/* Details Area */}
+                    <div className="p-3 flex flex-col gap-1 w-full flex-1">
+                      <div className="flex justify-between items-start gap-1">
                       <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-semibold">
                         {prod.category?.name || 'Uncategorized'}
                       </span>
+                      </div>
+                      <span className="font-bold text-sm text-foreground leading-tight group-hover:text-primary transition-colors">
+                        {prod.name}
+                      </span>
+                      <div className="mt-auto pt-2 flex items-center justify-between">
+                        <span className="font-black text-sm text-primary">₹{prod.price.toFixed(2)}</span>
+                      </div>
                     </div>
-
-                    <h4 className="font-bold text-xs text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                      {prod.name}
-                    </h4>
-
-                    <span className="mt-auto font-black text-sm text-foreground">₹{prod.price.toFixed(2)}</span>
                   </button>
                 ))
               )}
@@ -851,14 +868,14 @@ export default function OrderViewPage() {
       {showCheckoutModal && (
         <CheckoutModal
           tableId={tableId}
+          calculated={calculated}
+          paymentMethods={paymentMethods}
           onClose={() => setShowCheckoutModal(false)}
           onSuccess={() => {
             clearCart(tableId);
             router.push('/pos');
           }}
-          methods={paymentMethods}
-          calculateCartDetails={calculateCartDetails}
-          createOrder={async (status, methodId) => {
+          onSubmitOrder={async (methodId, refId) => {
             const res = await createOrderAction({
               tableId,
               customerId: cart.customer?._id,
@@ -872,7 +889,7 @@ export default function OrderViewPage() {
               tax: calculated.tax,
               discount: calculated.totalDiscount,
               total: calculated.total,
-              status,
+              status: 'paid',
               paymentMethodId: methodId,
               source: 'pos',
             });

@@ -3,20 +3,19 @@
 import dbConnect from '@/lib/db';
 import Coupon from '@/models/Coupon';
 import { revalidatePath } from 'next/cache';
-import type { UserRole } from '@/types/clerk';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
 
 async function requireAdmin() {
-  const { userId, sessionClaims } = await auth();
-  if (!userId) throw new Error('Unauthorized');
-  const role = (sessionClaims?.metadata as { role?: UserRole })?.role;
-  if (role !== 'admin') throw new Error('Forbidden: Admin access required');
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    throw new Error('Forbidden: Admin access required');
+  }
 }
 
 export async function getCoupons() {
   try {
-    await dbConnect();
-    return await Coupon.find({}).sort({ createdAt: -1 }).lean();
+    const coupons = await Coupon.find({}).sort({ createdAt: -1 }).lean();
+    return JSON.parse(JSON.stringify(coupons));
   } catch (err) {
     console.error('getCoupons error:', err);
     return [];

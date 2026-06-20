@@ -3,20 +3,20 @@
 import dbConnect from '@/lib/db';
 import PaymentMethod from '@/models/PaymentMethod';
 import { revalidatePath } from 'next/cache';
-import type { UserRole } from '@/types/clerk';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
 
+// Helper to ensure admin access
 async function requireAdmin() {
-  const { userId, sessionClaims } = await auth();
-  if (!userId) throw new Error('Unauthorized');
-  const role = (sessionClaims?.metadata as { role?: UserRole })?.role;
-  if (role !== 'admin') throw new Error('Forbidden: Admin access required');
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    throw new Error('Forbidden: Admin access required');
+  }
 }
 
 export async function getPaymentMethods() {
   try {
-    await dbConnect();
-    return await PaymentMethod.find({}).sort({ createdAt: 1 }).lean();
+    const methods = await PaymentMethod.find({}).sort({ createdAt: 1 }).lean();
+    return JSON.parse(JSON.stringify(methods));
   } catch (err) {
     console.error('getPaymentMethods error:', err);
     return [];

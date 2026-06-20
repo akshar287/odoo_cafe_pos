@@ -13,6 +13,7 @@ interface CheckoutModalProps {
   calculated: { subtotal: number; tax: number; totalDiscount: number; total: number };
   paymentMethods: Array<{ _id: string; name: string; type: string; upiId?: string }>;
   onClose: () => void;
+  onSuccess?: () => void;
   onSubmitOrder: (methodId: string, refId?: string) => Promise<{ success: boolean; order?: Record<string, unknown>; error?: string }>;
 }
 
@@ -21,6 +22,7 @@ export default function CheckoutModal({
   calculated,
   paymentMethods,
   onClose,
+  onSuccess,
   onSubmitOrder,
 }: CheckoutModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<{ type: string; _id: string; upiId?: string; name?: string } | null>(null);
@@ -148,7 +150,7 @@ export default function CheckoutModal({
           </div>
           
           <button
-            onClick={onClose}
+            onClick={onSuccess || onClose}
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 rounded-xl text-sm mt-2 shadow-lg shadow-primary/20"
           >
             Start New Order

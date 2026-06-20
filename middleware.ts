@@ -1,57 +1,47 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import type { UserRole } from '@/types/clerk';
+import type { NextRequest } from 'next/server';
+import { verifySession } from '@/lib/auth';
 
-// Route matchers
-const isAdminRoute = createRouteMatcher(['/backend(.*)']);
-const isPosRoute = createRouteMatcher(['/pos(.*)']);
-const isKdsRoute = createRouteMatcher(['/kds(.*)']);
-const isProtectedRoute = createRouteMatcher([
-  '/backend(.*)',
-  '/pos(.*)',
-  '/kds(.*)',
-]);
+const protectedRoutes = ['/backend', '/pos', '/kds'];
 
-export default clerkMiddleware(async (auth, req) => {
-  // All protected routes require authentication first
-  if (isProtectedRoute(req)) {
-    await auth.protect();
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-    const { sessionClaims } = await auth();
-    const role = (sessionClaims?.metadata as { role?: UserRole })?.role;
+  const isProtected = protectedRoutes.some((route) => pathname.startsWith(route));
 
-    // /backend — admin only
-    if (isAdminRoute(req)) {
-      if (role !== 'admin') {
-        const url = new URL('/sign-in', req.url);
-        url.searchParams.set('redirect_url', req.url);
-        return NextResponse.redirect(url);
-      }
+  if (isProtected) {
+    const sessionCookie = request.cookies.get('session')?.value;
+    
+    if (!sessionCookie) {
+      return NextResponse.redirect(new URL('/sign-in', request.url));
     }
 
-    // /pos — admin or cashier only
-    if (isPosRoute(req)) {
-      if (role !== 'admin' && role !== 'cashier') {
-        const url = new URL('/sign-in', req.url);
-        url.searchParams.set('redirect_url', req.url);
-        return NextResponse.redirect(url);
-      }
+    const session = await verifySession(sessionCookie);
+
+    if (!session) {
+      return NextResponse.redirect(new URL('/sign-in', request.url));
     }
 
-    // /kds — admin or kitchen-staff only
-    if (isKdsRoute(req)) {
-      if (role !== 'admin' && role !== 'kitchen-staff') {
-        const url = new URL('/sign-in', req.url);
-        url.searchParams.set('redirect_url', req.url);
-        return NextResponse.redirect(url);
-      }
+    // Role-based protection check within middleware
+    if (pathname.startsWith('/backend') && session.role !== 'admin') {
+      return NextResponse.redirect(new URL('/sign-in', request.url));
+    }
+
+    if (pathname.startsWith('/pos') && session.role !== 'admin' && session.role !== 'cashier') {
+      return NextResponse.redirect(new URL('/sign-in', request.url));
+    }
+
+    if (pathname.startsWith('/kds') && session.role !== 'admin' && session.role !== 'kitchen-staff') {
+      return NextResponse.redirect(new URL('/sign-in', request.url));
     }
   }
-});
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
+    // Skip Next.js internals and static files
     '/((?!_next|[^?]*\\.[\\w]+$).*)',
     // Always run for API routes
     '/(api|trpc)(.*)',

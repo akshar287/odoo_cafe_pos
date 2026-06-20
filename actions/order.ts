@@ -21,7 +21,8 @@ export async function getCustomers(search = '') {
         { email: { $regex: search, $options: 'i' } },
       ];
     }
-    return await Customer.find(query).limit(10).lean();
+    const customers = await Customer.find(query).limit(10).lean();
+    return JSON.parse(JSON.stringify(customers));
   } catch (err) {
     console.error('getCustomers error:', err);
     return [];
@@ -94,7 +95,7 @@ export async function createOrderAction(input: SubmitOrderInput) {
       status: input.status,
       paymentMethod: input.paymentMethodId || undefined,
       source: input.source,
-      kdsStatus: input.status === 'paid' ? 'to-cook' : 'none',
+      kdsStatus: (input.status === 'paid' || input.status === 'draft') ? 'to-cook' : 'none',
     };
 
     const order = await Order.create(orderData);
@@ -151,5 +152,139 @@ export async function getActiveOrdersForTable(tableId: string) {
   } catch (err) {
     console.error('getActiveOrdersForTable error:', err);
     return null;
+  }
+}
+
+export async function createSelfOrderAction(input: Omit<SubmitOrderInput, 'tableId'> & { tableId?: string }) {
+  try {
+    await dbConnect();
+
+    // Generate unique order number: CAFE-YYYYMMDD-XXXX
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const count = await Order.countDocuments({
+      createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+    });
+    const seq = String(count + 1).padStart(4, '0');
+    const orderNumber = `CAFE-${dateStr}-${seq}`;
+
+    // Map items
+    const items = input.items.map((item) => ({
+      product: item.productId,
+      qty: item.qty,
+      price: item.price,
+      discount: item.discount,
+    }));
+
+    const orderData: any = {
+      orderNumber,
+      table: input.tableId || undefined,
+      items,
+      subtotal: input.subtotal,
+      tax: input.tax,
+      discount: input.discount,
+      total: input.total,
+      status: 'paid', // Self-orders are considered paid or at least sent directly to kitchen
+      source: 'self-order',
+      kdsStatus: 'to-cook',
+    };
+
+    const order = await Order.create(orderData);
+
+    revalidatePath('/pos');
+    revalidatePath('/kds');
+    
+    // Trigger Pusher updates
+    const orderJson = JSON.parse(JSON.stringify(order));
+    await publishKdsUpdate('new-order', orderJson);
+
+    return { success: true, order: orderJson };
+  } catch (err: any) {
+    console.error('createSelfOrderAction error:', err);
+    return { success: false, error: err.message || 'Failed to submit self-order' };
+  }
+}
+
+export async function getSessionOrdersAction(search = '') {
+  try {
+    await dbConnect();
+    const session = await (await import('@/models/Session')).default.findOne({ status: 'open' }).lean();
+    const query: any = {};
+    if (session) {
+      query.createdAt = { $gte: (session as any).openedAt };
+    }
+    if (search) {
+      query.$or = [
+        { orderNumber: { $regex: search, $options: 'i' } },
+      ];
+    }
+    let orders = await Order.find(query)
+      .populate('customer', 'name')
+      .populate('table', 'number')
+      .populate('items.product', 'name price')
+      .sort({ createdAt: -1 })
+      .lean();
+    // If search, also filter by customer name (after population)
+    if (search) {
+      const lower = search.toLowerCase();
+      orders = orders.filter((o: any) =>
+        (o.orderNumber || '').toLowerCase().includes(lower) ||
+        (o.customer?.name || '').toLowerCase().includes(lower) ||
+        new Date(o.createdAt).toLocaleDateString().includes(lower)
+      );
+    }
+    return JSON.parse(JSON.stringify(orders));
+  } catch (err) {
+    console.error('getSessionOrdersAction error:', err);
+    return [];
+  }
+}
+
+export async function deleteOrderAction(orderId: string) {
+  try {
+    await dbConnect();
+    const order = await Order.findById(orderId).lean() as any;
+    if (!order) return { success: false, error: 'Order not found' };
+    if (order.status !== 'draft') return { success: false, error: 'Only draft orders can be deleted' };
+    await Order.findByIdAndDelete(orderId);
+    // Free the table if it was this order's table
+    if (order.table) {
+      const remaining = await Order.findOne({ table: order.table, status: 'draft' });
+      if (!remaining) {
+        await Table.findByIdAndUpdate(order.table, { status: 'available' });
+      }
+    }
+    revalidatePath('/pos');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to delete order' };
+  }
+}
+
+export async function getTableActiveCustomerAction(tableId: string) {
+  try {
+    await dbConnect();
+    const order = await Order.findOne({ table: tableId, status: 'draft' })
+      .populate('customer', 'name phone email')
+      .populate('employee', 'name username')
+      .populate('items.product', 'name price')
+      .lean() as any;
+    if (!order) return null;
+    return JSON.parse(JSON.stringify(order));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function getOrdersByIds(ids: string[]) {
+  try {
+    await dbConnect();
+    const orders = await Order.find({ _id: { $in: ids } })
+      .select('_id orderNumber status total createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+    return JSON.parse(JSON.stringify(orders));
+  } catch (err) {
+    console.error('getOrdersByIds error:', err);
+    return [];
   }
 }

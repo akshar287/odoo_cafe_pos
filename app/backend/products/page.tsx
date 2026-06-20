@@ -27,6 +27,7 @@ interface Product {
   isVeg: boolean;
   sendToKDS: boolean;
   unitOfMeasure: string;
+  image?: string;
 }
 
 export default function ProductsPage() {
@@ -48,6 +49,7 @@ export default function ProductsPage() {
   const [formIsVeg, setFormIsVeg] = useState(false);
   const [formSendToKDS, setFormSendToKDS] = useState(true);
   const [formUnit, setFormUnit] = useState('units');
+  const [formImage, setFormImage] = useState('');
 
   // Inline Category creation popup inside form
   const [showInlineCatPopup, setShowInlineCatPopup] = useState(false);
@@ -93,6 +95,7 @@ export default function ProductsPage() {
       setFormIsVeg(product.isVeg || false);
       setFormSendToKDS(product.sendToKDS !== false);
       setFormUnit(product.unitOfMeasure || 'units');
+      setFormImage(product.image || '');
     } else {
       setEditingProduct(null);
       setFormName('');
@@ -103,6 +106,7 @@ export default function ProductsPage() {
       setFormIsVeg(false);
       setFormSendToKDS(true);
       setFormUnit('units');
+      setFormImage('');
     }
     setIsDrawerOpen(true);
   };
@@ -130,6 +134,7 @@ export default function ProductsPage() {
       isVeg: formIsVeg,
       sendToKDS: formSendToKDS,
       unitOfMeasure: formUnit,
+      image: formImage,
     });
 
     if (res.success) {
@@ -226,6 +231,7 @@ export default function ProductsPage() {
                       className="rounded border-border focus:ring-primary text-primary"
                     />
                   </th>
+                  <th className="py-4 px-6">Image</th>
                   <th className="py-4 px-6">Name</th>
                   <th className="py-4 px-6">Category</th>
                   <th className="py-4 px-6">Price</th>
@@ -240,6 +246,9 @@ export default function ProductsPage() {
                     <tr key={i} className="animate-pulse">
                       <td className="py-4 px-6 text-center">
                         <div className="h-4 w-4 bg-muted rounded mx-auto" />
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="h-10 w-10 bg-muted rounded-lg" />
                       </td>
                       <td className="py-4 px-6">
                         <div className="h-4 w-40 bg-muted rounded" />
@@ -263,7 +272,7 @@ export default function ProductsPage() {
                   ))
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 px-6 text-center text-muted-foreground">
+                    <td colSpan={8} className="py-12 px-6 text-center text-muted-foreground">
                       No products found. Click &quot;New Product&quot; to add one.
                     </td>
                   </tr>
@@ -282,6 +291,16 @@ export default function ProductsPage() {
                           onChange={() => handleCheckboxToggle(p._id)}
                           className="rounded border-border focus:ring-primary text-primary"
                         />
+                      </td>
+                      <td className="py-4 px-6">
+                        {p.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.image} alt={p.name} className="h-10 w-10 rounded-lg object-cover bg-muted/50 border border-border" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-lg bg-muted border border-border flex items-center justify-center text-[10px] text-muted-foreground">
+                            No Img
+                          </div>
+                        )}
                       </td>
                       <td className="py-4 px-6 font-medium text-foreground">
                         <div className="flex items-center gap-2">
@@ -410,6 +429,58 @@ export default function ProductsPage() {
                   placeholder="e.g. Cafe Latte"
                   className="px-4 py-2 border border-border bg-background rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
+              </div>
+
+              {/* Product Image */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-muted-foreground flex justify-between">
+                  <span>Product Image</span>
+                  {formImage && (
+                    <button type="button" onClick={() => setFormImage('')} className="text-destructive text-xs hover:underline">
+                      Remove
+                    </button>
+                  )}
+                </label>
+                <div className="flex items-center gap-4">
+                  {formImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={formImage} alt="Preview" className="h-16 w-16 rounded-xl object-cover border border-border" />
+                  ) : (
+                    <div className="h-16 w-16 rounded-xl border border-dashed border-border flex items-center justify-center bg-muted/30 text-[10px] text-muted-foreground">
+                      No Img
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const img = new window.Image();
+                          const url = URL.createObjectURL(file);
+                          img.onload = () => {
+                            const MAX = 800;
+                            let { width, height } = img;
+                            if (width > MAX || height > MAX) {
+                              if (width > height) { height = Math.round((height * MAX) / width); width = MAX; }
+                              else { width = Math.round((width * MAX) / height); height = MAX; }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width; canvas.height = height;
+                            const ctx = canvas.getContext('2d')!;
+                            ctx.drawImage(img, 0, 0, width, height);
+                            const compressed = canvas.toDataURL('image/jpeg', 0.75);
+                            setFormImage(compressed);
+                            URL.revokeObjectURL(url);
+                          };
+                          img.src = url;
+                        }
+                      }}
+                      className="text-xs text-muted-foreground file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer w-full"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Price & UoM */}

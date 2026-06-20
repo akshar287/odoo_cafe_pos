@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserButton } from '@clerk/nextjs';
-import { Printer, Scan, Share2, Coffee } from 'lucide-react';
+import { Printer, Scan, Share2, Coffee, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface BackendHeaderProps {
@@ -64,9 +63,9 @@ export default function BackendHeader({ title }: BackendHeaderProps) {
           </button>
         </div>
 
-        {/* Clerk User Button */}
-        <div className="flex items-center justify-center rounded-full border border-primary/20 p-0.5 hover:scale-105 transition-all duration-200">
-          <UserButton afterSignOutUrl="/sign-in" />
+        {/* User Icon */}
+        <div className="flex items-center justify-center rounded-full p-0.5 hover:scale-105 transition-all duration-200">
+          <UserCircle className="h-8 w-8 text-primary" />
         </div>
       </div>
     </header>

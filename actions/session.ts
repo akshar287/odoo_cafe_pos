@@ -5,31 +5,22 @@ import Session from '@/models/Session';
 import Employee from '@/models/Employee';
 import Order from '@/models/Order';
 import PaymentMethod from '@/models/PaymentMethod';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
-import type { UserRole } from '@/types/clerk';
 
-// Helper to get or sync the current logged in employee
 export async function getOrCreateCurrentEmployee() {
-  const { userId, sessionClaims } = await auth();
-  if (!userId) throw new Error('Unauthorized');
+  const session = await getSession();
+  if (!session) throw new Error('Unauthorized');
 
   await dbConnect();
-  let employee = await Employee.findOne({ clerkId: userId });
+  let employee = await Employee.findById(session.userId);
 
   if (!employee) {
-    // If not in DB, sync from Clerk details
-    const role = (sessionClaims?.metadata as { role?: UserRole })?.role || 'employee';
-    const email = (sessionClaims?.email as string) || `user-${userId}@example.com`;
-    const name = (sessionClaims?.name as string) || 'Admin User';
-
-    employee = await Employee.create({
-      name,
-      email,
-      role: role === 'admin' ? 'admin' : 'employee',
-      clerkId: userId,
-      status: 'active',
-    });
+    if (session.role === 'admin' && session.userId === 'admin') {
+      // Fake admin employee for DB refs if needed, or return special admin object
+      return { _id: 'admin-id', name: 'Admin', role: 'admin' };
+    }
+    throw new Error('Employee not found');
   }
 
   return employee;

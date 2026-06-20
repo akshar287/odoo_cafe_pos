@@ -5,13 +5,11 @@ import Floor from '@/models/Floor';
 import Table from '@/models/Table';
 import { revalidatePath } from 'next/cache';
 import type { UserRole } from '@/types/clerk';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
 
 async function requireAdmin() {
-  const { userId, sessionClaims } = await auth();
-  if (!userId) throw new Error('Unauthorized');
-  const role = (sessionClaims?.metadata as { role?: UserRole })?.role;
-  if (role !== 'admin') throw new Error('Forbidden: Admin access required');
+  const session = await getSession();
+  if (!session || session.role !== 'admin') throw new Error('Forbidden: Admin access required');
 }
 
 export async function getFloorsAndTables() {
