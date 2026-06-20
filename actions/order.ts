@@ -234,12 +234,6 @@ export async function getSessionOrdersAction(search = '') {
       .populate('items.product', 'name price')
       .sort({ createdAt: -1 })
       .lean();
-      
-    console.log('--- GET SESSION ORDERS ---');
-    console.log('Session Status:', session?.status);
-    console.log('Session Opened At:', session?.openedAt);
-    console.log('Query:', JSON.stringify(query));
-    console.log('Found orders:', orders.length);
 
     // If search, also filter by customer name (after population)
     if (search) {
