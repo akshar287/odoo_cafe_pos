@@ -11,7 +11,6 @@ import {
   Coins,
   LogOut,
   Users,
-  Map,
   ClipboardList,
   Search,
   X,
@@ -48,6 +47,13 @@ interface Order {
 }
 
 type View = 'tables' | 'orders';
+
+interface PopulatedRef {
+  _id?: string;
+  name?: string;
+  phone?: string;
+  number?: string | number;
+}
 
 export default function PosPage() {
   const router = useRouter();
@@ -153,7 +159,7 @@ export default function PosPage() {
 
   const handleEditOrder = (order: Order) => {
     if (!order.table) { alert('No table linked to this draft.'); return; }
-    router.push(`/pos/order/${(order.table as any)._id || order.table}`);
+    router.push(`/pos/order/${(order.table as PopulatedRef)?._id || order.table}`);
   };
 
   const handleSignOut = async () => {
@@ -391,12 +397,12 @@ export default function PosPage() {
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         <div>
                           <p className="text-muted-foreground font-semibold mb-0.5">Customer</p>
-                          <p className="font-bold text-foreground">{(tableCustomerOrder as any).customer?.name || 'Walk-in'}</p>
-                          {(tableCustomerOrder as any).customer?.phone && <p className="text-muted-foreground">{(tableCustomerOrder as any).customer.phone}</p>}
+                          <p className="font-bold text-foreground">{(tableCustomerOrder as { customer?: PopulatedRef }).customer?.name || 'Walk-in'}</p>
+                          {(tableCustomerOrder as { customer?: PopulatedRef }).customer?.phone && <p className="text-muted-foreground">{(tableCustomerOrder as { customer?: PopulatedRef }).customer?.phone}</p>}
                         </div>
                         <div>
                           <p className="text-muted-foreground font-semibold mb-0.5">Served By</p>
-                          <p className="font-bold text-foreground">{(tableCustomerOrder as any).employee?.name || 'Staff'}</p>
+                          <p className="font-bold text-foreground">{(tableCustomerOrder as { employee?: PopulatedRef }).employee?.name || 'Staff'}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground font-semibold mb-0.5">Time</p>
@@ -415,7 +421,7 @@ export default function PosPage() {
                       <div className="flex flex-col gap-2">
                         {tableCustomerOrder.items.map((item, i) => (
                           <div key={i} className="flex items-center justify-between bg-muted/20 border border-border rounded-xl px-3 py-2.5 text-xs">
-                            <span className="font-semibold text-foreground">{(item.product as any)?.name || 'Unknown'}</span>
+                            <span className="font-semibold text-foreground">{(item.product as PopulatedRef)?.name || 'Unknown'}</span>
                             <div className="flex items-center gap-3">
                               <span className="text-muted-foreground">x{item.qty}</span>
                               <span className="font-black text-primary">₹{(item.price * item.qty).toFixed(2)}</span>
@@ -511,7 +517,7 @@ export default function PosPage() {
                         </td>
                         <td className="px-5 py-3.5">
                           <span className="font-black text-primary text-xs">{order.orderNumber}</span>
-                          {order.table && <p className="text-[10px] text-muted-foreground font-semibold">T-{(order.table as any).number}</p>}
+                          {order.table && <p className="text-[10px] text-muted-foreground font-semibold">T-{(order.table as PopulatedRef).number}</p>}
                         </td>
                         <td className="px-5 py-3.5 font-semibold text-foreground">
                           {order.customer?.name || <span className="text-muted-foreground italic">Walk-in</span>}
@@ -559,7 +565,7 @@ export default function PosPage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-semibold mb-0.5">Table</p>
-                    <p className="font-bold text-foreground">{selectedOrder.table ? `T-${(selectedOrder.table as any).number}` : 'N/A'}</p>
+                    <p className="font-bold text-foreground">{selectedOrder.table ? `T-${(selectedOrder.table as PopulatedRef).number}` : 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground font-semibold mb-0.5">Amount</p>
@@ -586,7 +592,7 @@ export default function PosPage() {
                       {selectedOrder.items.map((item, i) => (
                         <div key={i} className="flex items-center justify-between bg-muted/20 border border-border rounded-xl px-4 py-3 text-sm">
                           <div>
-                            <p className="font-semibold text-foreground">{(item.product as any)?.name || 'Unknown Product'}</p>
+                            <p className="font-semibold text-foreground">{(item.product as PopulatedRef)?.name || 'Unknown Product'}</p>
                             <p className="text-xs text-muted-foreground">₹{item.price.toFixed(2)} each</p>
                           </div>
                           <div className="flex items-center gap-3">

@@ -875,7 +875,7 @@ export default function OrderViewPage() {
             clearCart(tableId);
             router.push('/pos');
           }}
-          onSubmitOrder={async (methodId, refId) => {
+          onSubmitOrder={async (methodId, _refId) => {
             const res = await createOrderAction({
               tableId,
               customerId: cart.customer?._id,
