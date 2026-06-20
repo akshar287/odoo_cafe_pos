@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import CheckoutModal from '@/components/CheckoutModal';
 
-interface Prod { _id: string; name: string; price: number; tax: number; isVeg: boolean; category: Cat | unknown; sendToKDS?: boolean; unitOfMeasure?: string; description?: string; image?: string; }
+interface Prod { _id: string; name: string; price: number; tax: number; isVeg: boolean; category?: Cat | null; sendToKDS?: boolean; unitOfMeasure?: string; description?: string; image?: string; }
 interface Cat { _id: string; name: string; color: string; }
 interface PayMeth { _id: string; name: string; type: string; upiId?: string; active: boolean; }
 interface Coup { _id: string; name: string; type: string; code: string; discountType: string; discountValue: number; minQty: number; minOrderAmount: number; active: boolean; }
