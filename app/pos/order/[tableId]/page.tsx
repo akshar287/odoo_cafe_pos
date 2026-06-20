@@ -100,8 +100,8 @@ export default function OrderViewPage() {
 
     setProducts(prods.map((p: { _id: { toString: () => string }, category?: { _id: { toString: () => string } } }) => ({ ...p, _id: p._id.toString(), category: p.category ? { ...p.category, _id: p.category._id.toString() } : null })) as unknown as Prod[]);
     setCategories(cats.map((c: { _id: { toString: () => string } }) => ({ ...c, _id: c._id.toString() })) as unknown as Cat[]);
-    setPaymentMethods(payM.filter((m) => m.active).map((m: { _id: { toString: () => string }, type: string }) => ({ ...m, _id: m._id.toString(), type: m.type as 'cash' | 'card' | 'upi' })) as unknown as PayMeth[]);
-    setCoupons(cps.filter((c) => c.active).map((c: { _id: { toString: () => string }, type: string, discountType: string }) => ({ ...c, _id: c._id.toString(), type: c.type as 'coupon' | 'automated-product' | 'automated-order', discountType: c.discountType as 'percent' | 'fixed' })) as unknown as Coup[]);
+    setPaymentMethods(payM.filter((m: { active: boolean }) => m.active).map((m: { _id: { toString: () => string }, type: string }) => ({ ...m, _id: m._id.toString(), type: m.type as 'cash' | 'card' | 'upi' })) as unknown as PayMeth[]);
+    setCoupons(cps.filter((c: { active: boolean }) => c.active).map((c: { _id: { toString: () => string }, type: string, discountType: string }) => ({ ...c, _id: c._id.toString(), type: c.type as 'coupon' | 'automated-product' | 'automated-order', discountType: c.discountType as 'percent' | 'fixed' })) as unknown as Coup[]);
     setTables(layout.tables.map((t: { _id: { toString: () => string }; number: string; }) => ({ ...t, _id: t._id.toString() })));
 
     // Try loading existing draft order for this table

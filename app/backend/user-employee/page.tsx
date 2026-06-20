@@ -93,7 +93,7 @@ export default function UserEmployeePage() {
 
   const handleToggleStatus = async (emp: Employee) => {
     setMessage(null);
-    const res = await toggleEmployeeStatusAction(emp._id);
+    const res = await toggleEmployeeStatusAction(emp._id, emp.status);
     if (res.success) {
       setMessage({ type: 'success', text: `Status updated for ${emp.name}.` });
       loadEmployees();
