@@ -255,23 +255,23 @@ export default function OrderViewPage() {
   const calculated = calculateCartDetails();
 
   const calculatedRef = useRef(calculated);
-  useEffect(() => {
-    calculatedRef.current = calculated;
-  }, [calculated]);
+  calculatedRef.current = calculated; // update on every render without triggering effects
+
+  const cartSyncDataStr = JSON.stringify({
+    items: calculated.items,
+    subtotal: calculated.subtotal,
+    tax: calculated.tax,
+    discount: calculated.totalDiscount,
+    total: calculated.total,
+  });
 
   // Sync cart with customer display
   useEffect(() => {
     const timer = setTimeout(() => {
-      broadcastCartUpdateAction(tableId, {
-        items: calculated.items,
-        subtotal: calculated.subtotal,
-        tax: calculated.tax,
-        discount: calculated.totalDiscount,
-        total: calculated.total,
-      });
+      broadcastCartUpdateAction(tableId, JSON.parse(cartSyncDataStr));
     }, 500); // Debounce slighty to avoid spamming
     return () => clearTimeout(timer);
-  }, [tableId, cart.items, cart.couponCode, calculated.items, calculated.subtotal, calculated.tax, calculated.total, calculated.totalDiscount]);
+  }, [tableId, cartSyncDataStr]);
 
   // Listen for customer display connection
   useEffect(() => {
