@@ -11,6 +11,9 @@ import { getOrCreateCurrentEmployee } from './session';
 import { revalidatePath } from 'next/cache';
 import { publishKdsUpdate, publishTableUpdate } from '@/lib/realtime';
 
+// Ensure models are registered to prevent Mongoose MissingSchemaError during populate
+[Product, Table, Customer, Employee, Session, Order].forEach(() => {});
+
 export async function getCustomers(search = '') {
   try {
     await dbConnect();
@@ -297,7 +300,14 @@ export async function deleteOrderAction(orderId: string) {
 export async function getTableActiveCustomerAction(tableId: string) {
   try {
     await dbConnect();
-    const order = await Order.findOne({ table: tableId, status: 'draft' })
+    // Fetch draft order, or a paid order that is still in kitchen (to-cook or preparing)
+    const order = await Order.findOne({ 
+      table: tableId, 
+      $or: [
+        { status: 'draft' },
+        { status: 'paid', kdsStatus: { $in: ['to-cook', 'preparing'] } }
+      ]
+    })
       .populate('customer', 'name phone email')
       .populate('employee', 'name username')
       .populate('items.product', 'name price')
