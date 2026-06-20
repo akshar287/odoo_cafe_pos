@@ -234,6 +234,13 @@ export async function getSessionOrdersAction(search = '') {
       .populate('items.product', 'name price')
       .sort({ createdAt: -1 })
       .lean();
+      
+    console.log('--- GET SESSION ORDERS ---');
+    console.log('Session Status:', session?.status);
+    console.log('Session Opened At:', session?.openedAt);
+    console.log('Query:', JSON.stringify(query));
+    console.log('Found orders:', orders.length);
+
     // If search, also filter by customer name (after population)
     if (search) {
       const lower = search.toLowerCase();
@@ -244,8 +251,9 @@ export async function getSessionOrdersAction(search = '') {
       );
     }
     return JSON.parse(JSON.stringify(orders));
-  } catch (err) {
+  } catch (err: any) {
     console.error('getSessionOrdersAction error:', err);
+    require('fs').writeFileSync('c:/Users/Akshar/Desktop/odoo_cafe/order-error.log', String(err.stack || err));
     return [];
   }
 }
