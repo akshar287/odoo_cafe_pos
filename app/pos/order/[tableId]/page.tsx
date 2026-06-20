@@ -129,6 +129,9 @@ export default function OrderViewPage() {
           updateDiscount(tableId, prodId, item.discount);
         }
       });
+    } else {
+      // No draft order in DB, clear the cart to prevent leftover client-side state
+      clearCart(tableId);
     }
 
     setLoading(false);
