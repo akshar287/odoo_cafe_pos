@@ -116,6 +116,9 @@ export async function createOrderAction(input: SubmitOrderInput) {
     } else {
       order = await Order.create(orderData);
     }
+    if (!order) {
+      throw new Error('Failed to create or update order');
+    }
     
     // Fetch populated order for KDS
     const populatedOrder = await Order.findById(order._id)
