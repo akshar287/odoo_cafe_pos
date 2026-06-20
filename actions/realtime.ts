@@ -7,6 +7,7 @@ export async function broadcastCartUpdateAction(tableId: string, cartData: any) 
     await publishTableUpdate(tableId, 'cart-updated', cartData);
     return { success: true };
   } catch (e) {
+    console.error('broadcastCartUpdateAction error:', e);
     return { success: false };
   }
 }

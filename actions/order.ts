@@ -67,13 +67,24 @@ export async function createOrderAction(input: SubmitOrderInput) {
     await dbConnect();
     const employee = await getOrCreateCurrentEmployee();
 
-    // Generate unique order number: CAFE-YYYYMMDD-XXXX
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const count = await Order.countDocuments({
-      createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-    });
-    const seq = String(count + 1).padStart(4, '0');
-    const orderNumber = `CAFE-${dateStr}-${seq}`;
+    let orderNumber;
+    let existingDraft = null;
+
+    if (input.tableId) {
+      existingDraft = await Order.findOne({ table: input.tableId, status: 'draft' });
+    }
+
+    if (existingDraft) {
+      orderNumber = existingDraft.orderNumber;
+    } else {
+      // Generate unique order number: CAFE-YYYYMMDD-XXXX
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const count = await Order.countDocuments({
+        createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+      });
+      const seq = String(count + 1).padStart(4, '0');
+      orderNumber = `CAFE-${dateStr}-${seq}`;
+    }
 
     // Map items
     const items = input.items.map((item) => ({
@@ -99,7 +110,12 @@ export async function createOrderAction(input: SubmitOrderInput) {
       kdsStatus: (input.status === 'paid' || input.status === 'draft') ? 'to-cook' : 'none',
     };
 
-    const order = await Order.create(orderData);
+    let order;
+    if (existingDraft) {
+      order = await Order.findByIdAndUpdate(existingDraft._id, orderData, { new: true });
+    } else {
+      order = await Order.create(orderData);
+    }
     
     // Fetch populated order for KDS
     const populatedOrder = await Order.findById(order._id)
@@ -302,3 +318,5 @@ export async function getOrdersByIds(ids: string[]) {
     return [];
   }
 }
+
+

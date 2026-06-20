@@ -265,7 +265,7 @@ export default function OrderViewPage() {
       });
     }, 500); // Debounce slighty to avoid spamming
     return () => clearTimeout(timer);
-  }, [tableId, cart.items, cart.couponCode, calculated.subtotal, calculated.totalDiscount]);
+  }, [tableId, cart.items, cart.couponCode, calculated.items, calculated.subtotal, calculated.tax, calculated.total, calculated.totalDiscount]);
 
   // Create new customer inline
   const handleCreateCustomer = async () => {
