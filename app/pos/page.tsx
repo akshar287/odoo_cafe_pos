@@ -241,9 +241,9 @@ export default function PosPage() {
                 <a href="/backend" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors text-xs font-bold">
                   <Settings className="h-4 w-4" /><span>Settings</span>
                 </a>
-                <button onClick={() => alert('Customer display screen active on secondary monitor...')} className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors text-xs font-bold cursor-pointer">
+                <a href="/customer-display/terminal-1" target="_blank" rel="noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors text-xs font-bold cursor-pointer">
                   <Tv className="h-4 w-4" /><span>Customer Display</span>
-                </button>
+                </a>
               </div>
               <button onClick={handleSignOut} className="flex items-center gap-1 text-destructive hover:underline text-xs font-bold cursor-pointer">
                 <LogOut className="h-4 w-4" /><span>Log out</span>

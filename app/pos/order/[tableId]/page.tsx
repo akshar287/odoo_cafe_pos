@@ -9,6 +9,7 @@ import { getPaymentMethods } from '@/actions/payment-method';
 import { getCustomers, createCustomerAction, createOrderAction, getActiveOrdersForTable } from '@/actions/order';
 import { getCoupons } from '@/actions/coupon';
 import { getCurrentSession, closeSessionAction, getSessionCloseSummary } from '@/actions/session';
+import { broadcastCartUpdateAction } from '@/actions/realtime';
 import {
   ArrowLeft,
   Coffee,
@@ -251,6 +252,20 @@ export default function OrderViewPage() {
   };
 
   const calculated = calculateCartDetails();
+
+  // Sync cart with customer display
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      broadcastCartUpdateAction(tableId, {
+        items: calculated.items,
+        subtotal: calculated.subtotal,
+        tax: calculated.tax,
+        discount: calculated.totalDiscount,
+        total: calculated.total,
+      });
+    }, 500); // Debounce slighty to avoid spamming
+    return () => clearTimeout(timer);
+  }, [tableId, cart.items, cart.couponCode, calculated.subtotal, calculated.totalDiscount]);
 
   // Create new customer inline
   const handleCreateCustomer = async () => {
