@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const tables = await Table.find({ active: true })
       .populate('floor', 'name')
       .sort({ number: 1 })
-      .lean() as any[];
+      .lean() as Record<string, unknown>[];
 
     if (tables.length === 0) {
       return new NextResponse('No active tables found. Please create tables in the Booking section first.', {
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       });
       qrItems.push({
         tableNumber: table.number,
-        floorName: (table.floor as any)?.name || 'Main Floor',
+        floorName: (table.floor as { name?: string })?.name || 'Main Floor',
         qrDataUrl,
         url,
       });
@@ -181,11 +181,11 @@ export async function GET(request: Request) {
         'Content-Type': 'text/html; charset=utf-8',
       },
     });
-  } catch (err: any) {
-    console.error('QR export error:', err);
-    return new NextResponse(`Error generating QR codes: ${err.message}`, {
-      status: 500,
-      headers: { 'Content-Type': 'text/plain' },
-    });
+  } catch (err: unknown) {
+    console.error('QR Export error:', err);
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : 'Export failed' }, 
+      { status: 500 }
+    );
   }
 }

@@ -10,7 +10,6 @@ import {
   Zap,
   ShieldCheck,
   ArrowRight,
-  Star,
   CheckCircle2,
   Menu,
   X,

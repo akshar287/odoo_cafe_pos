@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import BackendHeader from '@/components/BackendHeader';
 import { getReportDataAction } from '@/actions/reports';
 import {
@@ -140,10 +140,10 @@ export default function ReportsPage() {
   const lineOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c: any) => `₹${c.raw.toFixed(2)}` } } },
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c: { raw: unknown }) => `₹${Number(c.raw).toFixed(2)}` } } },
     scales: {
       x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } },
-      y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, callback: (v: any) => `₹${v}` } },
+      y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, callback: (v: string | number) => `₹${v}` } },
     },
   };
 
@@ -168,7 +168,7 @@ export default function ReportsPage() {
     cutout: '65%',
     plugins: {
       legend: { display: false },
-      tooltip: { callbacks: { label: (c: any) => `${c.label}: ₹${c.raw.toFixed(2)} (${catTotal > 0 ? ((c.raw / catTotal) * 100).toFixed(1) : 0}%)` } },
+      tooltip: { callbacks: { label: (c: { label: string; raw: number }) => `${c.label}: ₹${c.raw.toFixed(2)} (${catTotal > 0 ? ((c.raw / catTotal) * 100).toFixed(1) : 0}%)` } },
     },
   };
 
@@ -262,6 +262,7 @@ export default function ReportsPage() {
                   <div className="h-52 flex items-center justify-center text-muted-foreground text-sm">No sales data for this period.</div>
                 ) : (
                   <div className="h-52">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <Line data={lineData} options={lineOptions as any} />
                   </div>
                 )}
@@ -275,6 +276,7 @@ export default function ReportsPage() {
                 ) : (
                   <div className="flex flex-col gap-3">
                     <div className="h-40 relative">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       <Doughnut data={donutData} options={donutOptions as any} />
                     </div>
                     <div className="flex flex-col gap-1.5 mt-1">
