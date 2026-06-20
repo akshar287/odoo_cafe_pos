@@ -2,6 +2,12 @@
 
 import dbConnect from '@/lib/db';
 import Order from '@/models/Order';
+import '@/models/Product';
+import '@/models/Table';
+import '@/models/Customer';
+import '@/models/Employee';
+import '@/models/PaymentMethod';
+import '@/models/Category';
 
 export async function getReportDataAction(period: string) {
   try {
@@ -122,8 +128,8 @@ export async function getReportDataAction(period: string) {
       topProducts,
       topCategories,
     }));
-  } catch (err) {
-    console.error('getReportDataAction error:', err);
+  } catch (err: any) {
+    console.error('getReportDataAction error:', err.message || err);
     return {
       kpis: { totalOrders: 0, totalRevenue: 0, avgOrder: 0, revenueChange: 0, ordersChange: 0 },
       salesChart: {},

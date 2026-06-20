@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Coffee, CheckCircle2, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import { getPusherClient } from '@/lib/realtime';
+import { requestCartSyncAction } from '@/actions/realtime';
 
 interface CartItem { name: string; qty: number; price: number; discount?: number; }
 interface CartData { items: CartItem[]; subtotal: number; tax: number; discount: number; total: number; }
@@ -43,6 +44,9 @@ export default function CustomerDisplayPage() {
           }, 5000);
         }
       });
+
+      // Request initial state from POS terminal
+      requestCartSyncAction(tableToken);
 
       return () => {
         pusher.unsubscribe(`table-${tableToken}`);

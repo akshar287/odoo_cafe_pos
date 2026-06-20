@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { getProducts, getCategories } from '@/actions/product';
@@ -9,7 +9,8 @@ import { getPaymentMethods } from '@/actions/payment-method';
 import { getCustomers, createCustomerAction, createOrderAction, getActiveOrdersForTable } from '@/actions/order';
 import { getCoupons } from '@/actions/coupon';
 import { getCurrentSession, closeSessionAction, getSessionCloseSummary } from '@/actions/session';
-import { broadcastCartUpdateAction } from '@/actions/realtime';
+import { broadcastCartUpdateAction, broadcastUpiQrAction } from '@/actions/realtime';
+import { getPusherClient } from '@/lib/realtime';
 import {
   ArrowLeft,
   Coffee,
@@ -253,6 +254,11 @@ export default function OrderViewPage() {
 
   const calculated = calculateCartDetails();
 
+  const calculatedRef = useRef(calculated);
+  useEffect(() => {
+    calculatedRef.current = calculated;
+  }, [calculated]);
+
   // Sync cart with customer display
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -266,6 +272,27 @@ export default function OrderViewPage() {
     }, 500); // Debounce slighty to avoid spamming
     return () => clearTimeout(timer);
   }, [tableId, cart.items, cart.couponCode, calculated.items, calculated.subtotal, calculated.tax, calculated.total, calculated.totalDiscount]);
+
+  // Listen for customer display connection
+  useEffect(() => {
+    const pusher = getPusherClient();
+    if (pusher) {
+      const channel = pusher.subscribe(`table-${tableId}`);
+      channel.bind('customer-joined', () => {
+        const calc = calculatedRef.current;
+        broadcastCartUpdateAction(tableId, {
+          items: calc.items,
+          subtotal: calc.subtotal,
+          tax: calc.tax,
+          discount: calc.totalDiscount,
+          total: calc.total,
+        });
+      });
+      return () => {
+        pusher.unsubscribe(`table-${tableId}`);
+      };
+    }
+  }, [tableId]);
 
   // Create new customer inline
   const handleCreateCustomer = async () => {
