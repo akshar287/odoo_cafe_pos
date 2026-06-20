@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Coffee, Minus, Plus, Trash2, ArrowLeft, ArrowRight, CheckCircle2, ChevronRight, X, Clock, PlayCircle, Search } from 'lucide-react';
+import { ShoppingBag, Coffee, Minus, Plus, ArrowLeft, ArrowRight, CheckCircle2, ChevronRight, X, Clock, PlayCircle, Search } from 'lucide-react';
 import { createSelfOrderAction, getOrdersByIds } from '@/actions/order';
 import { useSearchParams } from 'next/navigation';
 
@@ -52,14 +52,13 @@ export default function SelfOrderingClient({
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [recentOrderId, setRecentOrderId] = useState<string | null>(null);
   const [recentOrderNumber, setRecentOrderNumber] = useState<string>('');
   const [couponCode, setCouponCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [couponModalOpen, setCouponModalOpen] = useState(false);
 
   // History tracking
-  const [myOrders, setMyOrders] = useState<any[]>([]);
+  const [myOrders, setMyOrders] = useState<Record<string, unknown>[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
 
   useEffect(() => {
@@ -164,7 +163,6 @@ export default function SelfOrderingClient({
       });
 
       if (res.success && res.order) {
-        setRecentOrderId(res.order._id);
         setRecentOrderNumber(res.order.orderNumber);
         trackNewOrder(res.order._id);
         setCart([]);
@@ -172,7 +170,7 @@ export default function SelfOrderingClient({
       } else {
         alert(res.error || 'Checkout failed');
       }
-    } catch (err) {
+    } catch {
       alert('Checkout error');
     }
     setIsCheckingOut(false);
@@ -257,6 +255,7 @@ export default function SelfOrderingClient({
             <div key={p._id} onClick={() => openProductDetail(p)} className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm cursor-pointer flex flex-col hover:border-orange-200 hover:shadow-md transition-all">
               <div className="aspect-square bg-gray-100 rounded-xl mb-3 flex items-center justify-center overflow-hidden relative">
                  {p.image ? (
+                   // eslint-disable-next-line @next/next/no-img-element
                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
                  ) : (
                    <Coffee className="h-8 w-8 text-gray-300" />
@@ -294,6 +293,7 @@ export default function SelfOrderingClient({
       <div className="min-h-screen bg-white flex flex-col pb-24">
         <div className="relative aspect-video bg-gray-100 w-full flex items-center justify-center overflow-hidden">
           {selectedProduct.image ? (
+             // eslint-disable-next-line @next/next/no-img-element
              <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" />
           ) : (
             <Coffee className="h-16 w-16 text-gray-300" />

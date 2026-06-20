@@ -34,11 +34,11 @@ export default function QRScannerModal({ onClose }: QRScannerModalProps) {
           } else {
             setError('Invalid QR code. Please scan a valid table QR code.');
           }
-        } catch (e) {
+        } catch {
           setError('Invalid QR code format. Please scan a valid table QR code.');
         }
       },
-      (errorMessage) => {
+      () => {
         // We usually ignore these read errors as it fires constantly while searching
       }
     );
