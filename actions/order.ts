@@ -100,9 +100,10 @@ export async function createOrderAction(input: SubmitOrderInput) {
 
     const order = await Order.create(orderData);
 
-    // Update table status: occupied if draft, available if paid (since payment clears the table)
-    const nextTableStatus = input.status === 'paid' ? 'available' : 'occupied';
-    await Table.findByIdAndUpdate(input.tableId, { status: nextTableStatus });
+    // Update table status: always occupied when an order is placed (until kitchen completes it)
+    if (input.tableId) {
+      await Table.findByIdAndUpdate(input.tableId, { status: 'occupied' });
+    }
 
     revalidatePath('/pos');
     

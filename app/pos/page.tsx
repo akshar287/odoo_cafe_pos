@@ -22,6 +22,7 @@ import {
   TableProperties,
   CheckCircle2,
 } from 'lucide-react';
+import { getPusherClient } from '@/lib/realtime';
 import { getCurrentSession, openSessionAction, getLastSessionStats } from '@/actions/session';
 import { getFloorsAndTables } from '@/actions/booking';
 import {
@@ -109,7 +110,25 @@ export default function PosPage() {
     setOrdersLoading(false);
   }, []);
 
-  useEffect(() => { initData(); }, []);
+  useEffect(() => { 
+    initData(); 
+
+    const pusher = getPusherClient();
+    if (pusher) {
+      const channel = pusher.subscribe('kds-channel');
+      // Whenever an order is updated (e.g. marked completed by kitchen), refresh table layouts
+      channel.bind('update-order', () => {
+        initData();
+      });
+      // Whenever a new order is placed, refresh to show table as occupied
+      channel.bind('new-order', () => {
+        initData();
+      });
+      return () => {
+        pusher.unsubscribe('kds-channel');
+      };
+    }
+  }, []);
 
   useEffect(() => {
     if (currentView === 'orders' && activeSession) {

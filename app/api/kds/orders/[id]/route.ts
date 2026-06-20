@@ -25,6 +25,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // Publish table update for self-ordering / customer facing display
     if (orderJson.table?._id) {
       await publishTableUpdate(orderJson.table._id, 'order-updated', orderJson);
+      
+      // If the order is now completed, check if the table has any other active orders. If not, set table to available.
+      if (orderJson.kdsStatus === 'completed') {
+        const activeOrders = await Order.countDocuments({
+          table: orderJson.table._id,
+          kdsStatus: { $in: ['to-cook', 'preparing'] }
+        });
+        
+        if (activeOrders === 0) {
+          const Table = (await import('@/models/Table')).default;
+          await Table.findByIdAndUpdate(orderJson.table._id, { status: 'available' });
+        }
+      }
     }
 
     return NextResponse.json({ success: true, order: orderJson });
