@@ -99,6 +99,12 @@ export async function createOrderAction(input: SubmitOrderInput) {
     };
 
     const order = await Order.create(orderData);
+    
+    // Fetch populated order for KDS
+    const populatedOrder = await Order.findById(order._id)
+      .populate('table', 'number')
+      .populate('items.product', 'name sendToKDS')
+      .lean();
 
     // Update table status: always occupied when an order is placed (until kitchen completes it)
     if (input.tableId) {
@@ -108,7 +114,7 @@ export async function createOrderAction(input: SubmitOrderInput) {
     revalidatePath('/pos');
     
     // Trigger Pusher updates
-    const orderJson = JSON.parse(JSON.stringify(order));
+    const orderJson = JSON.parse(JSON.stringify(populatedOrder));
     if (orderJson.kdsStatus === 'to-cook') {
       await publishKdsUpdate('new-order', orderJson);
     }
@@ -128,7 +134,11 @@ export async function sendToKitchenAction(orderId: string) {
       orderId,
       { kdsStatus: 'to-cook' },
       { new: true }
-    );
+    )
+      .populate('table', 'number')
+      .populate('items.product', 'name sendToKDS')
+      .lean();
+
     revalidatePath('/pos');
     revalidatePath('/kds');
     const orderJson = JSON.parse(JSON.stringify(order));

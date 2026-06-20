@@ -125,23 +125,23 @@ export default function KDSPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 flex flex-col font-mono">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       {/* KDS Header */}
-      <header className="h-16 flex items-center justify-between px-6 bg-[#1e293b] border-b border-slate-700 shadow-sm shrink-0">
+      <header className="h-16 flex items-center justify-between px-6 bg-card border-b border-border shadow-sm shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-amber-500/20 rounded-xl flex items-center justify-center border border-amber-500/30">
-            <ChefHat className="h-5 w-5 text-amber-500" />
+          <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+            <ChefHat className="h-5 w-5 text-primary" />
           </div>
-          <h1 className="text-xl font-black text-white tracking-widest uppercase">Kitchen Display</h1>
+          <h1 className="text-xl font-black text-foreground tracking-widest uppercase">Kitchen Display</h1>
         </div>
 
-        <div className="flex bg-slate-800 rounded-xl p-1 border border-slate-700">
+        <div className="flex bg-muted rounded-xl p-1 border border-border">
           {(['all', 'to-cook', 'preparing', 'completed'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-                activeTab === tab ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                activeTab === tab ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-card'
               }`}
             >
               {tab.replace('-', ' ')}
@@ -150,19 +150,19 @@ export default function KDSPage() {
         </div>
 
         <div className="relative w-64">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search ticket..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 text-white pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+            className="w-full bg-background border border-border text-foreground pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
         <button 
           onClick={handleSignOut}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-xl border border-slate-700 transition-colors"
+          className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground text-sm font-bold rounded-xl border border-border transition-colors"
         >
           Log Out
         </button>
@@ -172,9 +172,9 @@ export default function KDSPage() {
       <main className="flex-1 overflow-x-auto p-6">
         <div className="flex gap-6 h-full min-w-max items-start">
           {loading ? (
-            <div className="text-slate-500 animate-pulse m-auto">Syncing kitchen queue...</div>
+            <div className="text-muted-foreground animate-pulse m-auto">Syncing kitchen queue...</div>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-slate-500 m-auto flex flex-col items-center gap-2">
+            <div className="text-muted-foreground m-auto flex flex-col items-center gap-2">
               <CheckCircle2 className="h-12 w-12 opacity-50" />
               <span>No tickets in queue</span>
             </div>
@@ -187,33 +187,33 @@ export default function KDSPage() {
                 <div 
                   key={order._id} 
                   className={`w-80 flex flex-col rounded-2xl overflow-hidden shrink-0 shadow-lg border transition-all ${
-                    order.kdsStatus === 'completed' ? 'bg-slate-800/50 border-slate-700 opacity-70' :
-                    isUrgent ? 'bg-red-950/40 border-red-900 shadow-red-900/20' : 
-                    'bg-slate-800 border-slate-700'
+                    order.kdsStatus === 'completed' ? 'bg-muted/50 border-border opacity-70' :
+                    isUrgent ? 'bg-red-500/10 border-red-500/30 shadow-red-500/10' : 
+                    'bg-card border-border'
                   }`}
                 >
                   {/* Ticket Header */}
                   <div className={`p-4 flex flex-col gap-2 cursor-pointer transition-colors ${
                     order.kdsStatus === 'to-cook' ? 'bg-amber-500/10 hover:bg-amber-500/20 border-b border-amber-500/20' :
                     order.kdsStatus === 'preparing' ? 'bg-blue-500/10 hover:bg-blue-500/20 border-b border-blue-500/20' :
-                    'bg-slate-900/50 hover:bg-slate-900/70 border-b border-slate-800'
+                    'bg-card hover:bg-muted/50 border-b border-border'
                   }`} onClick={() => advanceStatus(order)}>
                     <div className="flex justify-between items-start">
-                      <h3 className="text-xl font-black text-white">#{order.orderNumber.split('-').pop()}</h3>
+                      <h3 className="text-xl font-black text-foreground">#{order.orderNumber.split('-').pop()}</h3>
                       {order.table && (
-                        <div className="px-2 py-1 bg-white/10 rounded-md text-xs font-bold text-white border border-white/10">
+                        <div className="px-2 py-1 bg-muted rounded-md text-xs font-bold text-foreground border border-border">
                           T-{order.table.number}
                         </div>
                       )}
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className={`font-bold uppercase tracking-wider ${
-                        order.kdsStatus === 'to-cook' ? 'text-amber-400' :
-                        order.kdsStatus === 'preparing' ? 'text-blue-400' : 'text-slate-400'
+                        order.kdsStatus === 'to-cook' ? 'text-amber-500' :
+                        order.kdsStatus === 'preparing' ? 'text-blue-500' : 'text-muted-foreground'
                       }`}>
                         {order.kdsStatus.replace('-', ' ')}
                       </span>
-                      <span className={`flex items-center gap-1 font-bold ${isUrgent ? 'text-red-400' : 'text-slate-400'}`}>
+                      <span className={`flex items-center gap-1 font-bold ${isUrgent ? 'text-red-500' : 'text-muted-foreground'}`}>
                         <Clock className="h-3.5 w-3.5" />
                         {timeDiff}m ago
                       </span>
@@ -228,16 +228,16 @@ export default function KDSPage() {
                         onClick={() => toggleItemCompletion(order, idx)}
                         className={`flex gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
                           item.completed 
-                            ? 'bg-slate-900/50 border-slate-800 opacity-50' 
-                            : 'bg-slate-700/50 border-slate-600 hover:border-amber-500/50'
+                            ? 'bg-muted/30 border-border opacity-50' 
+                            : 'bg-card border-border hover:border-primary/50 shadow-sm'
                         }`}
                       >
                         <div className={`h-8 w-8 shrink-0 rounded-lg flex items-center justify-center font-black text-sm border ${
-                          item.completed ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-slate-800 border-slate-500 text-white'
+                          item.completed ? 'bg-muted border-border text-muted-foreground' : 'bg-primary/10 border-primary/20 text-primary'
                         }`}>
                           {item.qty}
                         </div>
-                        <div className={`flex flex-col justify-center flex-1 ${item.completed ? 'line-through text-slate-500' : 'text-white'}`}>
+                        <div className={`flex flex-col justify-center flex-1 ${item.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                           <span className="font-bold text-sm leading-tight">{item.product?.name || 'Unknown Item'}</span>
                         </div>
                         {item.completed && (
@@ -251,13 +251,13 @@ export default function KDSPage() {
 
                   {/* Action Bar */}
                   {order.kdsStatus !== 'completed' && (
-                    <div className="p-3 bg-slate-900/50 border-t border-slate-800">
+                    <div className="p-3 bg-muted/20 border-t border-border">
                       <button 
                         onClick={() => advanceStatus(order)}
                         className={`w-full py-3 rounded-xl font-bold text-sm transition-colors cursor-pointer flex items-center justify-center gap-2 ${
                           order.kdsStatus === 'to-cook' 
-                            ? 'bg-amber-500 hover:bg-amber-400 text-slate-900' 
-                            : 'bg-blue-500 hover:bg-blue-400 text-white'
+                            ? 'bg-primary hover:bg-primary/90 text-primary-foreground' 
+                            : 'bg-blue-500 hover:bg-blue-600 text-white'
                         }`}
                       >
                         {order.kdsStatus === 'to-cook' ? (
