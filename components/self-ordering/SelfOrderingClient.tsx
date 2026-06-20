@@ -57,8 +57,8 @@ export default function SelfOrderingClient({
   const [discountPercent, setDiscountPercent] = useState(0);
   const [couponModalOpen, setCouponModalOpen] = useState(false);
 
-  // History tracking
-  const [myOrders, setMyOrders] = useState<Record<string, unknown>[]>([]);
+  interface MyOrder { _id: string; orderNumber: string; status: string; createdAt: string; total: number; }
+  const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
 
   useEffect(() => {

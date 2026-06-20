@@ -118,7 +118,7 @@ export default function CheckoutModal({
           </div>
           <h2 className="text-2xl font-black text-foreground">Order Confirmed!</h2>
           <p className="text-muted-foreground text-sm">
-            Order <strong className="text-foreground">#{successOrder.orderNumber}</strong> has been successfully placed.
+            Order <strong className="text-foreground">#{String(successOrder.orderNumber)}</strong> has been successfully placed.
           </p>
           <div className="bg-muted/30 w-full rounded-2xl p-4 flex flex-col gap-2 my-2 border border-border text-sm">
             <div className="flex justify-between">

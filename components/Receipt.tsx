@@ -13,8 +13,8 @@ export const Receipt = React.forwardRef<HTMLDivElement, { order: Record<string, 
         <p className="text-xs text-gray-600">City, Country</p>
         <div className="border-b-2 border-dashed border-gray-300 my-4" />
         <h2 className="text-lg font-bold">RECEIPT</h2>
-        <p className="text-xs mt-1">Order #{o.orderNumber}</p>
-        <p className="text-xs">{new Date(o.createdAt || Date.now()).toLocaleString()}</p>
+        <p className="text-xs mt-1">Order #{String(o.orderNumber)}</p>
+        <p className="text-xs">{new Date((o.createdAt as string | number) || Date.now()).toLocaleString()}</p>
       </div>
 
       <div className="mb-4">

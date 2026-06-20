@@ -60,7 +60,7 @@ export default function PosPage() {
 
   // Session states
   const [activeSession, setActiveSession] = useState<Sess | null>(null);
-  const [lastStats, setLastStats] = useState({ lastClosedAt: null, lastSellAmount: 0 });
+  const [lastStats, setLastStats] = useState<{ lastClosedAt: Date | string | null | undefined, lastSellAmount: number }>({ lastClosedAt: null, lastSellAmount: 0 });
   const [loading, setLoading] = useState(true);
   const [openingBalance, setOpeningBalance] = useState('2000');
   const [openingError, setOpeningError] = useState('');
