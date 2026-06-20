@@ -4,7 +4,7 @@ import dbConnect from '@/lib/db';
 import Floor from '@/models/Floor';
 import Table from '@/models/Table';
 import { revalidatePath } from 'next/cache';
-import type { UserRole } from '@/types/clerk';
+
 import { getSession } from '@/lib/auth';
 
 async function requireAdmin() {
