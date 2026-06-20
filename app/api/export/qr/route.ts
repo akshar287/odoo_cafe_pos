@@ -21,7 +21,8 @@ export async function GET(request: Request) {
       });
     }
 
-    const origin = new URL(request.url).origin;
+    // Use the live Vercel URL instead of the request URL (so local downloads still point to live)
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://odoo-cafe-pos-six.vercel.app';
 
     // Generate QR codes as base64 PNGs
     const qrItems: { tableNumber: string; floorName: string; qrDataUrl: string; url: string }[] = [];
