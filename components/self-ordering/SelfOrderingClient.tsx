@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Coffee, Minus, Plus, ArrowLeft, ArrowRight, CheckCircle2, ChevronRight, X, Clock, PlayCircle, Search } from 'lucide-react';
+import { ShoppingBag, Coffee, Minus, Plus, ArrowLeft, ArrowRight, CheckCircle2, ChevronRight, X, Clock, PlayCircle, Search, QrCode, Banknote } from 'lucide-react';
 import { createSelfOrderAction, getOrdersByIds } from '@/actions/order';
 import { useSearchParams } from 'next/navigation';
+import QRCode from 'qrcode';
 
 interface Category {
   _id: string;
@@ -30,14 +31,35 @@ interface CartItem {
   addons: string[];
 }
 
-type ScreenState = 'SPLASH' | 'MENU' | 'PRODUCT_DETAIL' | 'PAYMENT' | 'CONFIRMATION' | 'HISTORY';
+interface Coupon {
+  _id: string;
+  name: string;
+  code: string;
+  type: string; // 'automated-order' | 'automated-product' | 'manual'
+  discountType: string; // 'percentage' | 'fixed'
+  discountValue: number;
+  minOrderAmount?: number;
+}
+
+interface PaymentMethod {
+  _id: string;
+  name: string;
+  type: string; // 'cash' | 'upi' | 'card'
+  upiId?: string;
+}
+
+type ScreenState = 'SPLASH' | 'MENU' | 'PRODUCT_DETAIL' | 'CART' | 'PAYMENT' | 'CONFIRMATION' | 'HISTORY';
 
 export default function SelfOrderingClient({
   categories,
   products,
+  coupons = [],
+  paymentMethods = [],
 }: {
   categories: Category[];
   products: Product[];
+  coupons?: Coupon[];
+  paymentMethods?: PaymentMethod[];
 }) {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('table');
@@ -54,29 +76,44 @@ export default function SelfOrderingClient({
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [recentOrderNumber, setRecentOrderNumber] = useState<string>('');
   const [couponCode, setCouponCode] = useState('');
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponModalOpen, setCouponModalOpen] = useState(false);
+  const [couponError, setCouponError] = useState('');
+
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [upiQrUrl, setUpiQrUrl] = useState('');
 
   interface MyOrder { _id: string; orderNumber: string; status: string; createdAt: string; total: number; }
   const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackedIds, setTrackedIds] = useState<string[]>([]);
 
   useEffect(() => {
-    // Load tracked orders from localStorage
     const saved = localStorage.getItem('odooCafeSelfOrders');
     if (saved) {
       const ids = JSON.parse(saved);
       if (ids.length > 0) {
-        fetchMyOrders(ids);
+        setTrackedIds(ids);
       }
     }
   }, []);
 
-  const fetchMyOrders = async (ids: string[]) => {
-    setTrackingLoading(true);
+  useEffect(() => {
+    if (trackedIds.length > 0) {
+      fetchMyOrders(trackedIds, true);
+      const interval = setInterval(() => {
+        fetchMyOrders(trackedIds, false);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [trackedIds]);
+
+  const fetchMyOrders = async (ids: string[], showLoading = true) => {
+    if (showLoading) setTrackingLoading(true);
     const orders = await getOrdersByIds(ids);
     setMyOrders(orders);
-    setTrackingLoading(false);
+    if (showLoading) setTrackingLoading(false);
   };
 
   const trackNewOrder = (id: string) => {
@@ -84,7 +121,7 @@ export default function SelfOrderingClient({
     let ids = saved ? JSON.parse(saved) : [];
     ids = [id, ...ids];
     localStorage.setItem('odooCafeSelfOrders', JSON.stringify(ids));
-    fetchMyOrders(ids);
+    setTrackedIds(ids);
   };
 
   // Derived
@@ -97,8 +134,40 @@ export default function SelfOrderingClient({
   const cartQty = cart.reduce((sum, item) => sum + item.qty, 0);
   const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.qty, 0);
   const taxTotal = cart.reduce((acc, item) => acc + (item.product.price * (item.product.tax / 100)) * item.qty, 0);
-  const discountAmount = (subtotal * discountPercent) / 100;
-  const total = subtotal + taxTotal - discountAmount;
+
+  // Re-evaluate automated coupons if no manual coupon is applied
+  useEffect(() => {
+    if (!appliedCoupon || appliedCoupon.type !== 'manual') {
+      let best: Coupon | null = null;
+      let maxD = 0;
+      for (const c of coupons) {
+        if (c.type === 'automated-order' || c.type === 'automated-product') {
+          if (!c.minOrderAmount || subtotal >= c.minOrderAmount) {
+            const d = c.discountType === 'percentage' ? (subtotal * c.discountValue) / 100 : c.discountValue;
+            if (d > maxD) { maxD = d; best = c; }
+          }
+        }
+      }
+      if (best && maxD > 0) {
+        setAppliedCoupon(best);
+        setCouponCode(best.code || best.name);
+      } else if (appliedCoupon && appliedCoupon.type !== 'manual') {
+        setAppliedCoupon(null);
+        setCouponCode('');
+      }
+    }
+  }, [subtotal, coupons, appliedCoupon]);
+
+  let discountAmount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.discountType === 'percentage') {
+      discountAmount = (subtotal * appliedCoupon.discountValue) / 100;
+    } else {
+      discountAmount = appliedCoupon.discountValue;
+    }
+    if (discountAmount > subtotal) discountAmount = subtotal; // cap discount at subtotal
+  }
+  const total = Math.max(0, subtotal + taxTotal - discountAmount);
 
   const handleAddToCart = () => {
     if (!selectedProduct) return;
@@ -134,14 +203,50 @@ export default function SelfOrderingClient({
     setScreen('PRODUCT_DETAIL');
   };
 
-  const applyCoupon = (percent: number) => {
-    setDiscountPercent(percent);
-    setCouponCode(`${percent}% Discount`);
+  const applyCoupon = (code: string) => {
+    setCouponError('');
+    if (!code.trim()) {
+      setAppliedCoupon(null);
+      setCouponCode('');
+      setCouponModalOpen(false);
+      return;
+    }
+    const c = coupons.find(c => c.code.toLowerCase() === code.trim().toLowerCase() && c.type === 'manual');
+    if (!c) {
+      setCouponError('Invalid or expired coupon code');
+      return;
+    }
+    if (c.minOrderAmount && subtotal < c.minOrderAmount) {
+      setCouponError(`Minimum order amount of ₹${c.minOrderAmount} required`);
+      return;
+    }
+    setAppliedCoupon(c);
+    setCouponCode(c.code);
     setCouponModalOpen(false);
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (cart.length === 0) return;
+    setScreen('PAYMENT');
+  };
+
+  const handleSelectPayment = async (pm: PaymentMethod) => {
+    setSelectedPaymentMethod(pm);
+    if (pm.type === 'upi' && pm.upiId) {
+      const upiString = `upi://pay?pa=${pm.upiId}&pn=OdooCafe&am=${total.toFixed(2)}&cu=INR`;
+      try {
+        const url = await QRCode.toDataURL(upiString, { width: 250, margin: 2 });
+        setUpiQrUrl(url);
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      setUpiQrUrl('');
+    }
+  };
+
+  const confirmOrder = async () => {
+    if (!selectedPaymentMethod) return;
     setIsCheckingOut(true);
     try {
       const items = cart.map(item => ({
@@ -157,7 +262,7 @@ export default function SelfOrderingClient({
         tax: taxTotal,
         discount: discountAmount,
         total,
-        status: 'paid', // self order assumes direct payment flow via dummy or UPI integration, so we mark it paid
+        status: selectedPaymentMethod.type === 'upi' ? 'paid' : 'draft',
         source: 'self-order',
         tableId: tableId || undefined,
       });
@@ -273,7 +378,7 @@ export default function SelfOrderingClient({
         {/* Sticky Cart Banner */}
         {cartQty > 0 && (
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 z-20">
-            <button onClick={() => setScreen('PAYMENT')} className="w-full bg-orange-500 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl shadow-orange-500/30">
+            <button onClick={() => setScreen('CART')} className="w-full bg-orange-500 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl shadow-orange-500/30">
               <div className="flex items-center gap-2 font-bold">
                 <span className="bg-white/20 px-2 py-0.5 rounded-lg text-sm">{cartQty} QTY</span>
                 <span className="text-sm">Total: ₹{total.toFixed(0)}</span>
@@ -366,7 +471,7 @@ export default function SelfOrderingClient({
     );
   }
 
-  if (screen === 'PAYMENT') {
+  if (screen === 'CART') {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
@@ -428,9 +533,9 @@ export default function SelfOrderingClient({
               <span>Tax (GST)</span>
               <span>₹{taxTotal.toFixed(2)}</span>
             </div>
-            {discountPercent > 0 && (
+            {appliedCoupon && (
               <div className="flex justify-between text-sm font-semibold text-green-500">
-                <span>Discount ({discountPercent}%)</span>
+                <span>Discount ({appliedCoupon.code || appliedCoupon.name})</span>
                 <span>-₹{discountAmount.toFixed(2)}</span>
               </div>
             )}
@@ -459,23 +564,97 @@ export default function SelfOrderingClient({
                 <h3 className="font-black text-lg text-gray-900">Coupon Code</h3>
                 <button onClick={() => setCouponModalOpen(false)} className="p-1 bg-gray-100 rounded-full"><X className="h-4 w-4" /></button>
               </div>
-              <input type="text" placeholder="Enter a coupon code" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-semibold text-sm mb-4 focus:outline-none focus:border-orange-500" />
+              <input
+                type="text"
+                placeholder="Enter a coupon code"
+                value={couponInput}
+                onChange={e => setCouponInput(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-semibold text-sm mb-4 focus:outline-none focus:border-orange-500 uppercase"
+              />
               
-              <div className="space-y-3 mb-6">
-                <button onClick={() => applyCoupon(30)} className="w-full flex items-center gap-3 p-3 border-2 border-orange-100 bg-orange-50 rounded-xl text-left">
-                  <div className="h-4 w-4 rounded-full border-[4px] border-orange-500" />
-                  <span className="font-bold text-gray-900 text-sm">30% Discount</span>
-                </button>
-                <button onClick={() => applyCoupon(50)} className="w-full flex items-center gap-3 p-3 border-2 border-gray-100 rounded-xl text-left hover:border-gray-200">
-                  <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
-                  <span className="font-bold text-gray-900 text-sm">50% Discount</span>
-                </button>
-              </div>
-
-              <button onClick={() => setCouponModalOpen(false)} className="w-full bg-orange-500 text-white font-black py-3 rounded-xl">Enter</button>
+              {couponError && <p className="text-red-500 text-xs font-bold mb-4">{couponError}</p>}
+              
+              <button onClick={() => applyCoupon(couponInput)} className="w-full bg-orange-500 text-white font-black py-3 rounded-xl mb-3">Apply Code</button>
+              {appliedCoupon && appliedCoupon.type === 'manual' && (
+                <button onClick={() => applyCoupon('')} className="w-full bg-gray-100 text-gray-600 font-black py-3 rounded-xl">Remove Coupon</button>
+              )}
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (screen === 'PAYMENT') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="bg-white sticky top-0 z-10 border-b border-gray-100 px-4 py-4 flex items-center gap-3">
+          <button onClick={() => setScreen('MENU')} className="p-2 hover:bg-gray-100 rounded-full">
+            <ArrowLeft className="h-5 w-5 text-gray-700" />
+          </button>
+          <h2 className="font-black text-xl text-gray-900">Payment</h2>
+        </div>
+        
+        <div className="p-6 flex-1 max-w-lg mx-auto w-full">
+          <h3 className="font-black text-gray-900 mb-4">Select Payment Method</h3>
+          <div className="space-y-3 mb-8">
+            {paymentMethods.map(pm => (
+              <button
+                key={pm._id}
+                onClick={() => handleSelectPayment(pm)}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${selectedPaymentMethod?._id === pm._id ? 'border-orange-500 bg-orange-50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl ${selectedPaymentMethod?._id === pm._id ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                    {pm.type === 'upi' ? <QrCode className="h-6 w-6" /> : <Banknote className="h-6 w-6" />}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900 capitalize">{pm.name}</p>
+                    <p className="text-xs text-gray-500">{pm.type === 'upi' ? 'Pay via UPI App' : 'Pay at counter'}</p>
+                  </div>
+                </div>
+                <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod?._id === pm._id ? 'border-orange-500' : 'border-gray-300'}`}>
+                  {selectedPaymentMethod?._id === pm._id && <div className="h-2.5 w-2.5 bg-orange-500 rounded-full" />}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {selectedPaymentMethod?.type === 'upi' && upiQrUrl && (
+            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center animate-in zoom-in-95 duration-300 mb-8">
+              <p className="font-bold text-gray-900 mb-4">Scan to Pay</p>
+              <div className="bg-white p-2 rounded-2xl border-2 border-gray-100 mb-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={upiQrUrl} alt="UPI QR" className="w-48 h-48 rounded-xl" />
+              </div>
+              <p className="font-black text-2xl text-gray-900 mb-1">₹{total.toFixed(2)}</p>
+              <p className="text-sm font-semibold text-gray-500 mb-4">{selectedPaymentMethod.upiId}</p>
+              <div className="w-full bg-blue-50 text-blue-600 font-bold text-sm p-3 rounded-xl flex items-center justify-center gap-2">
+                <Clock className="h-4 w-4" /> Awaiting Payment...
+              </div>
+            </div>
+          )}
+
+          {selectedPaymentMethod?.type === 'cash' && (
+            <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100 mb-8 flex items-start gap-4">
+              <Banknote className="h-8 w-8 text-orange-500 shrink-0" />
+              <div>
+                <p className="font-bold text-gray-900 mb-1">Pay at Counter</p>
+                <p className="text-sm text-gray-600 font-medium">Your order will be sent to the kitchen. Please pay ₹{total.toFixed(2)} to the waiter or at the counter.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 bg-white border-t border-gray-100 sticky bottom-0">
+          <button
+            onClick={confirmOrder}
+            disabled={!selectedPaymentMethod || isCheckingOut}
+            className="w-full max-w-lg mx-auto block bg-orange-500 text-white font-black text-lg py-4 rounded-2xl shadow-xl shadow-orange-500/30 hover:bg-orange-600 disabled:opacity-50 transition-all"
+          >
+            {isCheckingOut ? 'Processing...' : `Confirm Order • ₹${total.toFixed(0)}`}
+          </button>
+        </div>
       </div>
     );
   }

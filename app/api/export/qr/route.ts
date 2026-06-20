@@ -5,7 +5,7 @@ import Table from '@/models/Table';
 import '@/models/Floor';
 import QRCode from 'qrcode';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await dbConnect();
 
