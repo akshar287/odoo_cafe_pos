@@ -126,10 +126,10 @@ export async function createOrderAction(input: SubmitOrderInput) {
       .populate('items.product', 'name sendToKDS')
       .lean();
 
-    // Update table status: free the table if order is paid, otherwise occupy it
+    // Update table status: mark occupied when an order is placed.
+    // It will only become available when the KDS kitchen completes the order.
     if (input.tableId) {
-      const newTableStatus = input.status === 'paid' ? 'available' : 'occupied';
-      await Table.findByIdAndUpdate(input.tableId, { status: newTableStatus });
+      await Table.findByIdAndUpdate(input.tableId, { status: 'occupied' });
     }
 
     revalidatePath('/pos');
