@@ -9,9 +9,9 @@ export interface IOrderItem {
 
 export interface IOrder extends Document {
   orderNumber: string;
-  table: Types.ObjectId;
+  table?: Types.ObjectId;
   customer?: Types.ObjectId;
-  employee: Types.ObjectId;
+  employee?: Types.ObjectId;
   items: IOrderItem[];
   subtotal: number;
   tax: number;
@@ -35,9 +35,9 @@ const OrderItemSchema = new Schema<IOrderItem>({
 const OrderSchema = new Schema<IOrder>(
   {
     orderNumber: { type: String, required: true, unique: true },
-    table: { type: Schema.Types.ObjectId, ref: 'Table', required: true },
+    table: { type: Schema.Types.ObjectId, ref: 'Table' },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer', sparse: true },
-    employee: { type: Schema.Types.ObjectId, ref: 'Employee', required: true },
+    employee: { type: Schema.Types.ObjectId, ref: 'Employee' },
     items: { type: [OrderItemSchema], required: true },
     subtotal: { type: Number, required: true, min: 0 },
     tax: { type: Number, required: true, min: 0 },
