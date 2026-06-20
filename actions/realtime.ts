@@ -60,3 +60,21 @@ export async function requestCartSyncAction(tableId: string) {
     return { success: false };
   }
 }
+
+export async function broadcastTableSelectedAction(terminalToken: string, tableId: string) {
+  try {
+    await publishTableUpdate(terminalToken, 'table-selected', { tableId });
+    return { success: true };
+  } catch (e) {
+    return { success: false };
+  }
+}
+
+export async function broadcastTableDeselectedAction(terminalToken: string) {
+  try {
+    await publishTableUpdate(terminalToken, 'table-deselected', {});
+    return { success: true };
+  } catch (e) {
+    return { success: false };
+  }
+}

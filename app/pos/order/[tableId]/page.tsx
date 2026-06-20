@@ -9,7 +9,7 @@ import { getPaymentMethods } from '@/actions/payment-method';
 import { getCustomers, createCustomerAction, createOrderAction, getActiveOrdersForTable } from '@/actions/order';
 import { getCoupons } from '@/actions/coupon';
 import { getCurrentSession, closeSessionAction, getSessionCloseSummary } from '@/actions/session';
-import { broadcastCartUpdateAction } from '@/actions/realtime';
+import { broadcastCartUpdateAction, broadcastTableSelectedAction, broadcastTableDeselectedAction } from '@/actions/realtime';
 import { getPusherClient } from '@/lib/realtime';
 import {
   ArrowLeft,
@@ -264,6 +264,15 @@ export default function OrderViewPage() {
     discount: calculated.totalDiscount,
     total: calculated.total,
   });
+
+  // Broadcast table selection when POS page mounts or table changes
+  useEffect(() => {
+    const terminalToken = 'terminal-1';
+    broadcastTableSelectedAction(terminalToken, tableId);
+    return () => {
+      broadcastTableDeselectedAction(terminalToken);
+    };
+  }, [tableId]);
 
   // Sync cart with customer display
   useEffect(() => {

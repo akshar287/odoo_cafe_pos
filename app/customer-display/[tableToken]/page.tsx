@@ -20,20 +20,37 @@ export default function CustomerDisplayPage() {
 
   useEffect(() => {
     const pusher = getPusherClient();
-    if (pusher) {
-      const channel = pusher.subscribe(`table-${tableToken}`);
+    if (!pusher) return;
 
-      channel.bind('cart-updated', (data: CartData) => {
+    // Subscribed to the terminal/customer-display channel (e.g. table-terminal-1)
+    const terminalChannel = pusher.subscribe(`table-${tableToken}`);
+
+    // Track active table channel/subscription
+    let activeTableChannel: ReturnType<typeof pusher.subscribe> | null = null;
+    let activeTableId: string | null = null;
+
+    const setupTableSubscription = (tableId: string) => {
+      // Clean up previous table subscription if any
+      if (activeTableChannel) {
+        pusher.unsubscribe(`table-${activeTableId}`);
+        activeTableChannel = null;
+        activeTableId = null;
+      }
+
+      activeTableId = tableId;
+      activeTableChannel = pusher.subscribe(`table-${tableId}`);
+
+      activeTableChannel.bind('cart-updated', (data: CartData) => {
         setCart(data);
         setUpiData(null);
         setOrderStatus('browsing');
       });
 
-      channel.bind('show-upi-qr', (data: { url: string; amount: number }) => {
+      activeTableChannel.bind('show-upi-qr', (data: { url: string; amount: number }) => {
         setUpiData(data);
       });
 
-      channel.bind('order-updated', (data: { status: string }) => {
+      activeTableChannel.bind('order-updated', (data: { status: string }) => {
         if (data.status === 'paid') {
           setOrderStatus('paid');
           setUpiData(null);
@@ -45,13 +62,41 @@ export default function CustomerDisplayPage() {
         }
       });
 
-      // Request initial state from POS terminal
-      requestCartSyncAction(tableToken);
+      // Request initial state from POS terminal for this table
+      requestCartSyncAction(tableId);
+    };
 
-      return () => {
-        pusher.unsubscribe(`table-${tableToken}`);
-      };
+    // Listen for cashier selecting a table
+    terminalChannel.bind('table-selected', (data: { tableId: string }) => {
+      if (data?.tableId) {
+        setupTableSubscription(data.tableId);
+      }
+    });
+
+    // Listen for cashier de-selecting/leaving a table
+    terminalChannel.bind('table-deselected', () => {
+      if (activeTableChannel && activeTableId) {
+        pusher.unsubscribe(`table-${activeTableId}`);
+        activeTableChannel = null;
+        activeTableId = null;
+      }
+      setCart({ items: [], subtotal: 0, tax: 0, discount: 0, total: 0 });
+      setUpiData(null);
+      setOrderStatus('browsing');
+    });
+
+    // Backwards compatibility: if tableToken is NOT 'terminal-1' (i.e. it is a direct tableId),
+    // then subscribe directly to it.
+    if (tableToken && tableToken !== 'terminal-1') {
+      setupTableSubscription(tableToken);
     }
+
+    return () => {
+      pusher.unsubscribe(`table-${tableToken}`);
+      if (activeTableId) {
+        pusher.unsubscribe(`table-${activeTableId}`);
+      }
+    };
   }, [tableToken]);
 
   if (orderStatus === 'paid') {
