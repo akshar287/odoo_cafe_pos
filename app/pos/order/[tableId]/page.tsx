@@ -9,7 +9,7 @@ import { getPaymentMethods } from '@/actions/payment-method';
 import { getCustomers, createCustomerAction, createOrderAction, getActiveOrdersForTable } from '@/actions/order';
 import { getCoupons } from '@/actions/coupon';
 import { getCurrentSession, closeSessionAction, getSessionCloseSummary } from '@/actions/session';
-import { broadcastCartUpdateAction, broadcastUpiQrAction } from '@/actions/realtime';
+import { broadcastCartUpdateAction } from '@/actions/realtime';
 import { getPusherClient } from '@/lib/realtime';
 import {
   ArrowLeft,
