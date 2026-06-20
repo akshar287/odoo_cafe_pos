@@ -4,6 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, FileText, X, Trash2, Edit } from 'lucide-react';
 
+interface OrderItem {
+  qty: number;
+  price: number;
+  discount?: number;
+  product?: { name: string };
+}
+
 interface Order {
   _id: string;
   orderNumber: string;
@@ -11,7 +18,7 @@ interface Order {
   total: number;
   status: string;
   createdAt: string;
-  items: Record<string, unknown>[];
+  items: OrderItem[];
   table?: { number: string; _id: string };
 }
 
