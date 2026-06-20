@@ -81,12 +81,28 @@ export async function createOrderAction(input: SubmitOrderInput) {
       orderNumber = existingDraft.orderNumber;
     } else {
       // Generate unique order number: CAFE-YYYYMMDD-XXXX
-      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const count = await Order.countDocuments({
-        createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-      });
-      const seq = String(count + 1).padStart(4, '0');
-      orderNumber = `CAFE-${dateStr}-${seq}`;
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}${mm}${dd}`;
+      const prefix = `CAFE-${dateStr}-`;
+
+      // Find the last order created today to get the highest sequence
+      const lastOrder = await Order.findOne({ orderNumber: new RegExp('^' + prefix) })
+        .sort({ orderNumber: -1 })
+        .lean();
+
+      let seqNum = 1;
+      if (lastOrder && lastOrder.orderNumber) {
+        const parts = lastOrder.orderNumber.split('-');
+        const lastSeq = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(lastSeq)) {
+          seqNum = lastSeq + 1;
+        }
+      }
+      const seq = String(seqNum).padStart(4, '0');
+      orderNumber = `${prefix}${seq}`;
     }
 
     // Map items
@@ -195,12 +211,28 @@ export async function createSelfOrderAction(input: Omit<SubmitOrderInput, 'table
     await dbConnect();
 
     // Generate unique order number: CAFE-YYYYMMDD-XXXX
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const count = await Order.countDocuments({
-      createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-    });
-    const seq = String(count + 1).padStart(4, '0');
-    const orderNumber = `CAFE-${dateStr}-${seq}`;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}${mm}${dd}`;
+    const prefix = `CAFE-${dateStr}-`;
+
+    // Find the last order created today to get the highest sequence
+    const lastOrder = await Order.findOne({ orderNumber: new RegExp('^' + prefix) })
+      .sort({ orderNumber: -1 })
+      .lean();
+
+    let seqNum = 1;
+    if (lastOrder && lastOrder.orderNumber) {
+      const parts = lastOrder.orderNumber.split('-');
+      const lastSeq = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastSeq)) {
+        seqNum = lastSeq + 1;
+      }
+    }
+    const seq = String(seqNum).padStart(4, '0');
+    const orderNumber = `${prefix}${seq}`;
 
     // Map items
     const items = input.items.map((item) => ({
