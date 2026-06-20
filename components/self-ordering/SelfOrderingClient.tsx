@@ -84,7 +84,7 @@ export default function SelfOrderingClient({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [upiQrUrl, setUpiQrUrl] = useState('');
 
-  interface MyOrder { _id: string; orderNumber: string; status: string; createdAt: string; total: number; }
+  interface MyOrder { _id: string; orderNumber: string; status: string; kdsStatus?: string; createdAt: string; total: number; }
   const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackedIds, setTrackedIds] = useState<string[]>([]);
@@ -705,14 +705,29 @@ export default function SelfOrderingClient({
               {myOrders.map(order => {
                 let badgeClass = 'bg-gray-100 text-gray-600';
                 let statusLabel = 'Received';
-                if (order.status === 'draft') {
-                  badgeClass = 'bg-orange-100 text-orange-600'; statusLabel = 'ToCook';
-                } else if (order.status === 'paid') {
-                  badgeClass = 'bg-blue-100 text-blue-600'; statusLabel = 'Preparing';
-                } else if (order.status === 'cancelled') {
-                  badgeClass = 'bg-red-100 text-red-600'; statusLabel = 'Cancelled';
+                if (order.status === 'cancelled') {
+                  badgeClass = 'bg-red-100 text-red-600';
+                  statusLabel = 'Cancelled';
+                } else if (order.kdsStatus === 'to-cook') {
+                  badgeClass = 'bg-orange-100 text-orange-600';
+                  statusLabel = 'To Cook';
+                } else if (order.kdsStatus === 'preparing') {
+                  badgeClass = 'bg-blue-100 text-blue-600';
+                  statusLabel = 'Preparing';
+                } else if (order.kdsStatus === 'completed') {
+                  badgeClass = 'bg-green-100 text-green-600';
+                  statusLabel = 'Completed';
                 } else {
-                  badgeClass = 'bg-green-100 text-green-600'; statusLabel = 'Completed';
+                  if (order.status === 'draft') {
+                    badgeClass = 'bg-orange-100 text-orange-600';
+                    statusLabel = 'To Cook';
+                  } else if (order.status === 'paid') {
+                    badgeClass = 'bg-blue-100 text-blue-600';
+                    statusLabel = 'Preparing';
+                  } else {
+                    badgeClass = 'bg-green-100 text-green-600';
+                    statusLabel = 'Completed';
+                  }
                 }
 
                 return (

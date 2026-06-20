@@ -225,11 +225,16 @@ export async function createSelfOrderAction(input: Omit<SubmitOrderInput, 'table
 
     const order = await Order.create(orderData);
 
+    const populatedOrder = await Order.findById(order._id)
+      .populate('table', 'number')
+      .populate('items.product', 'name sendToKDS')
+      .lean();
+
     revalidatePath('/pos');
     revalidatePath('/kds');
     
     // Trigger Pusher updates
-    const orderJson = JSON.parse(JSON.stringify(order));
+    const orderJson = JSON.parse(JSON.stringify(populatedOrder));
     await publishKdsUpdate('new-order', orderJson);
 
     return { success: true, order: orderJson };
@@ -323,7 +328,7 @@ export async function getOrdersByIds(ids: string[]) {
   try {
     await dbConnect();
     const orders = await Order.find({ _id: { $in: ids } })
-      .select('_id orderNumber status total createdAt')
+      .select('_id orderNumber status kdsStatus total createdAt')
       .sort({ createdAt: -1 })
       .lean();
     return JSON.parse(JSON.stringify(orders));
