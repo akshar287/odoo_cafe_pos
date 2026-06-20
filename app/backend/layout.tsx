@@ -16,7 +16,8 @@ import {
   MonitorPlay,
   LogOut,
   Menu,
-  X
+  X,
+  Bot
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -34,6 +35,7 @@ const menuItems: SidebarItem[] = [
   { name: 'User/Employee', href: '/backend/user-employee', icon: Users },
   { name: 'Reports', href: '/backend/reports', icon: BarChart3 },
   { name: 'Mobile Order', href: '/backend/settings/mobile-order', icon: MonitorPlay },
+  { name: 'AI Admin Agent', href: '/backend/ai-agent', icon: Bot },
 ];
 
 export default function BackendLayout({ children }: { children: React.ReactNode }) {

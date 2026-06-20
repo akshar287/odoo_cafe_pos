@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Coffee, Minus, Plus, ArrowLeft, ArrowRight, CheckCircle2, ChevronRight, X, Clock, PlayCircle, Search, QrCode, Banknote } from 'lucide-react';
 import { createSelfOrderAction, getOrdersByIds } from '@/actions/order';
+import { trackEvent } from '@/lib/matomo';
 import { useSearchParams } from 'next/navigation';
 import QRCode from 'qrcode';
 
@@ -268,6 +269,7 @@ export default function SelfOrderingClient({
       });
 
       if (res.success && res.order) {
+        trackEvent('SelfOrdering', 'Checkout Success', `Order: ${res.order.orderNumber}`, total);
         setRecentOrderNumber(res.order.orderNumber);
         trackNewOrder(res.order._id);
         setCart([]);

@@ -7,6 +7,7 @@ import { getProducts, getCategories } from '@/actions/product';
 import { getFloorsAndTables } from '@/actions/booking';
 import { getPaymentMethods } from '@/actions/payment-method';
 import { getCustomers, createCustomerAction, createOrderAction, getActiveOrdersForTable } from '@/actions/order';
+import { trackEvent } from '@/lib/matomo';
 import { getCoupons } from '@/actions/coupon';
 import { getCurrentSession, closeSessionAction, getSessionCloseSummary } from '@/actions/session';
 import { broadcastCartUpdateAction, broadcastTableSelectedAction, broadcastTableDeselectedAction } from '@/actions/realtime';
@@ -890,6 +891,7 @@ export default function OrderViewPage() {
           paymentMethods={paymentMethods}
           onClose={() => setShowCheckoutModal(false)}
           onSuccess={() => {
+            trackEvent('POS', 'Checkout Success', `Table ID: ${tableId}`, calculated.total);
             clearCart(tableId);
             router.push('/pos');
           }}

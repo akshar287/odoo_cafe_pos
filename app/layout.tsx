@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   description: "Modern web-based Restaurant Point-of-Sale system",
 };
 
+import { Suspense } from 'react';
+import MatomoTracker from '@/components/MatomoTracker';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,6 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Suspense fallback={null}>
+          <MatomoTracker />
+        </Suspense>
         {children}
       </body>
     </html>
