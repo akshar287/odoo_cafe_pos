@@ -27,14 +27,14 @@ export async function GET(request: Request) {
     const qrItems: { tableNumber: string; floorName: string; qrDataUrl: string; url: string }[] = [];
 
     for (const table of tables) {
-      const url = `${origin}/menu?table=${table._id}`;
+      const url = `${origin}/menu?table=${String(table._id)}`;
       const qrDataUrl = await QRCode.toDataURL(url, {
         width: 300,
         margin: 2,
         color: { dark: '#1a1a1a', light: '#ffffff' },
       });
       qrItems.push({
-        tableNumber: table.number,
+        tableNumber: String(table.number),
         floorName: (table.floor as { name?: string })?.name || 'Main Floor',
         qrDataUrl,
         url,
