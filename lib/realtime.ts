@@ -3,16 +3,21 @@ import PusherClient from 'pusher-js';
 
 // Server-side Pusher instance
 export const getPusherServer = () => {
-  if (!process.env.PUSHER_APP_ID || !process.env.PUSHER_KEY || !process.env.PUSHER_SECRET || !process.env.PUSHER_CLUSTER) {
+  const appId = process.env.PUSHER_APP_ID;
+  const key = process.env.PUSHER_KEY || process.env.NEXT_PUBLIC_PUSHER_KEY;
+  const secret = process.env.PUSHER_SECRET;
+  const cluster = process.env.PUSHER_CLUSTER || process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+  if (!appId || !key || !secret || !cluster) {
     console.warn('Pusher environment variables are not set. Realtime features will not work.');
     return null;
   }
 
   return new Pusher({
-    appId: process.env.PUSHER_APP_ID,
-    key: process.env.PUSHER_KEY,
-    secret: process.env.PUSHER_SECRET,
-    cluster: process.env.PUSHER_CLUSTER,
+    appId,
+    key,
+    secret,
+    cluster,
     useTLS: true,
   });
 };

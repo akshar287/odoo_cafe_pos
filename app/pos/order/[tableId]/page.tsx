@@ -300,35 +300,7 @@ export default function OrderViewPage() {
     setShowDiscountModal(false);
   };
 
-  // Send order draft to kitchen
-  const handleSendToKitchen = async () => {
-    if (cart.items.length === 0) return;
-    const items = cart.items.map((item) => ({
-      productId: item.productId,
-      qty: item.qty,
-      price: item.price,
-      discount: item.discount,
-    }));
 
-    const res = await createOrderAction({
-      tableId,
-      customerId: cart.customer?._id,
-      items,
-      subtotal: calculated.subtotal,
-      tax: calculated.tax,
-      discount: calculated.totalDiscount,
-      total: calculated.total,
-      status: 'draft',
-      source: 'pos',
-    });
-
-    if (res.success) {
-      alert('Ticket successfully routed to Kitchen Display System!');
-      router.push('/pos');
-    } else {
-      alert('Failed to send to kitchen: ' + res.error);
-    }
-  };
 
   // Handle order checkout / payment
   const handlePayment = async () => {
@@ -631,7 +603,7 @@ export default function OrderViewPage() {
           </div>
 
           {/* Cart actions row */}
-          <div className="p-3 border-t border-border bg-muted/10 grid grid-cols-3 gap-2 shrink-0">
+          <div className="p-3 border-t border-border bg-muted/10 grid grid-cols-2 gap-2 shrink-0">
             <button
               onClick={() => setShowCustomerModal(true)}
               className="py-2 border border-border bg-card hover:bg-muted rounded-xl text-xs font-bold flex flex-col items-center gap-1 cursor-pointer"
@@ -645,14 +617,6 @@ export default function OrderViewPage() {
             >
               <Percent className="h-4 w-4 text-primary" />
               <span>Coupon</span>
-            </button>
-            <button
-              onClick={handleSendToKitchen}
-              disabled={cart.items.length === 0}
-              className="py-2 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-xl text-xs font-black flex flex-col items-center gap-1 cursor-pointer disabled:opacity-50"
-            >
-              <ChefHat className="h-4 w-4 text-primary" />
-              <span>Send Kitchen</span>
             </button>
           </div>
 
