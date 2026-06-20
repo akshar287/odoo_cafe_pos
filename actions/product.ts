@@ -4,7 +4,7 @@ import dbConnect from '@/lib/db';
 import Product from '@/models/Product';
 import Category from '@/models/Category';
 import { revalidatePath } from 'next/cache';
-import type { UserRole } from '@/types/clerk';
+
 import { getSession } from '@/lib/auth';
 
 // Helper to ensure admin access
