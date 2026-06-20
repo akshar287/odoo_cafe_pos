@@ -157,7 +157,7 @@ export default function BookingPage() {
       id: table._id,
       number: table.number,
       seats: table.seats,
-      floorId: table.floor?._id || table.floor,
+      floorId: (table.floor?._id || table.floor) as string,
       active: !table.active,
     });
     if (res.success) {

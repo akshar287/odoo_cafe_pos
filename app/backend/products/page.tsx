@@ -58,8 +58,8 @@ export default function ProductsPage() {
     setLoading(true);
     const prodList = await getProducts({ search, categoryId: selectedCategory });
     const catList = await getCategories();
-    setProducts(prodList);
-    setCategories(catList);
+    setProducts(prodList.map((p: { _id: { toString: () => string }, category?: { _id: { toString: () => string } } }) => ({ ...p, _id: p._id.toString(), category: p.category ? { ...p.category, _id: p.category._id.toString() } : null } as unknown as Product)));
+    setCategories(catList.map((c: { _id: { toString: () => string } }) => ({ ...c, _id: c._id.toString() } as unknown as Category)));
     setLoading(false);
   };
 

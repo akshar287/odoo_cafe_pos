@@ -8,6 +8,7 @@ import Employee from '@/models/Employee';
 import Product from '@/models/Product';
 import { getOrCreateCurrentEmployee } from './session';
 import { revalidatePath } from 'next/cache';
+import { publishKdsUpdate, publishTableUpdate } from '@/lib/realtime';
 
 export async function getCustomers(search = '') {
   try {
@@ -103,7 +104,15 @@ export async function createOrderAction(input: SubmitOrderInput) {
     await Table.findByIdAndUpdate(input.tableId, { status: nextTableStatus });
 
     revalidatePath('/pos');
-    return { success: true, order: JSON.parse(JSON.stringify(order)) };
+    
+    // Trigger Pusher updates
+    const orderJson = JSON.parse(JSON.stringify(order));
+    if (orderJson.kdsStatus === 'to-cook') {
+      await publishKdsUpdate('new-order', orderJson);
+    }
+    await publishTableUpdate(input.tableId, 'order-updated', orderJson);
+
+    return { success: true, order: orderJson };
   } catch (err: any) {
     console.error('createOrderAction error:', err);
     return { success: false, error: err.message || 'Failed to submit order' };
@@ -120,7 +129,10 @@ export async function sendToKitchenAction(orderId: string) {
     );
     revalidatePath('/pos');
     revalidatePath('/kds');
-    return { success: true, order: JSON.parse(JSON.stringify(order)) };
+    const orderJson = JSON.parse(JSON.stringify(order));
+    await publishKdsUpdate('new-order', orderJson);
+    
+    return { success: true, order: orderJson };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to route to kitchen' };
   }

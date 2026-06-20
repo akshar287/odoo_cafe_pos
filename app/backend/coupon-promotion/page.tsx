@@ -41,7 +41,12 @@ export default function CouponPromotionPage() {
   const loadPromos = async () => {
     setLoading(true);
     const list = await getCoupons();
-    setPromos(list);
+    setPromos(list.map((c: { _id: { toString: () => string }, name: string, type: string, code: string, discountType: string, discountValue: number, minQty: number, minOrderAmount: number, active: boolean }) => ({
+      ...c,
+      _id: c._id.toString(),
+      type: c.type as 'coupon' | 'automated-product' | 'automated-order',
+      discountType: c.discountType as 'percent' | 'fixed'
+    })));
     setLoading(false);
   };
 

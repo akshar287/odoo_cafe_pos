@@ -14,15 +14,10 @@ import {
   Search,
   User,
   Percent,
-  ChevronRight,
-  QrCode,
-  DollarSign,
-  CreditCard,
   ChefHat,
   Loader2,
 } from 'lucide-react';
-import QRCode from 'qrcode';
-import Image from 'next/image';
+import CheckoutModal from '@/components/CheckoutModal';
 
 interface Prod { _id: string; name: string; price: number; tax: number; isVeg: boolean; category: Cat | unknown; sendToKDS?: boolean; unitOfMeasure?: string; description?: string; }
 interface Cat { _id: string; name: string; color: string; }
@@ -75,9 +70,7 @@ export default function OrderViewPage() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [enteredCouponCode, setEnteredCouponCode] = useState('');
 
-  const [showUpiQrModal, setShowUpiQrModal] = useState(false);
-  const [upiQrUrl, setUpiQrUrl] = useState('');
-  const [activeUpiMethod, setActiveUpiMethod] = useState<PayMeth | null>(null);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closeSummary, setCloseSummary] = useState<CloseSumm | null>(null);
@@ -102,10 +95,10 @@ export default function OrderViewPage() {
     const payM = await getPaymentMethods();
     const cps = await getCoupons();
 
-    setProducts(prods);
-    setCategories(cats);
-    setPaymentMethods(payM.filter((m) => m.active));
-    setCoupons(cps.filter((c) => c.active));
+    setProducts(prods.map((p: { _id: { toString: () => string }, category?: { _id: { toString: () => string } } }) => ({ ...p, _id: p._id.toString(), category: p.category ? { ...p.category, _id: p.category._id.toString() } : null })) as unknown as Prod[]);
+    setCategories(cats.map((c: { _id: { toString: () => string } }) => ({ ...c, _id: c._id.toString() })) as unknown as Cat[]);
+    setPaymentMethods(payM.filter((m) => m.active).map((m: { _id: { toString: () => string }, type: string }) => ({ ...m, _id: m._id.toString(), type: m.type as 'cash' | 'card' | 'upi' })) as unknown as PayMeth[]);
+    setCoupons(cps.filter((c) => c.active).map((c: { _id: { toString: () => string }, type: string, discountType: string }) => ({ ...c, _id: c._id.toString(), type: c.type as 'coupon' | 'automated-product' | 'automated-order', discountType: c.discountType as 'percent' | 'fixed' })) as unknown as Coup[]);
 
     // Try loading existing draft order for this table
     const draft = await getActiveOrdersForTable(tableId);
@@ -115,16 +108,20 @@ export default function OrderViewPage() {
       if (draft.customer) {
         setCustomer(tableId, draft.customer);
       }
-      draft.items.forEach((item: { product: Prod | { _id: string; name: string; tax: number; isVeg: boolean }; price: number; qty: number; discount: number }) => {
+      draft.items.forEach((item: { product: Record<string, unknown> | string; price: number; qty: number; discount: number }) => {
+        const prodObj = item.product as { _id?: { toString: () => string }; name?: string; tax?: number; isVeg?: boolean };
+        const prodId = prodObj._id ? prodObj._id.toString() : (item.product as string);
         addToCart(tableId, {
-          _id: item.product._id || item.product,
-          name: item.product.name,
+          _id: prodId,
+          name: prodObj.name || 'Unknown',
           price: item.price,
-          tax: item.product.tax || 5,
-          isVeg: item.product.isVeg,
+          tax: prodObj.tax || 5,
+          isVeg: prodObj.isVeg || false,
         });
-        updateQty(tableId, item.product._id || item.product, item.qty);
-        updateDiscount(tableId, item.product._id || item.product, item.discount);
+        updateQty(tableId, prodId, item.qty);
+        if (item.discount > 0) {
+          updateDiscount(tableId, prodId, item.discount);
+        }
       });
     }
 
@@ -139,7 +136,12 @@ export default function OrderViewPage() {
   // Search customers in modal
   useEffect(() => {
     if (customerSearch) {
-      getCustomers(customerSearch).then(setCustomerResults);
+      getCustomers(customerSearch).then((res) => {
+        setCustomerResults(res.map((c: { _id: { toString: () => string }, name: string, phone?: string }) => ({
+          ...c,
+          _id: c._id.toString()
+        })) as unknown as Cust[]);
+      });
     } else {
       setCustomerResults([]);
     }
@@ -310,70 +312,26 @@ export default function OrderViewPage() {
   };
 
   // Handle order checkout / payment
-  const handlePayment = async (methodType: 'cash' | 'card' | 'upi', methodId: string) => {
+  const handlePayment = async () => {
     if (cart.items.length === 0) return;
-
-    if (methodType === 'upi') {
-      const mDetail = paymentMethods.find((m) => m._id === methodId);
-      if (mDetail && mDetail.upiId) {
-        setActiveUpiMethod(mDetail);
-        const payUrl = `upi://pay?pa=${encodeURIComponent(mDetail.upiId)}&pn=${encodeURIComponent(
-          'Odoo Cafe'
-        )}&am=${calculated.total.toFixed(2)}`;
-        
-        QRCode.toDataURL(payUrl, { width: 220, margin: 1 })
-          .then((url) => {
-            setUpiQrUrl(url);
-            setShowUpiQrModal(true);
-          })
-          .catch(console.error);
-        return;
-      }
-    }
-
-    await submitPaidOrder(methodId);
+    setShowCheckoutModal(true);
   };
 
-  const submitPaidOrder = async (paymentMethodId: string) => {
-    const items = cart.items.map((item) => ({
-      productId: item.productId,
-      qty: item.qty,
-      price: item.price,
-      discount: item.discount,
-    }));
 
-    const res = await createOrderAction({
-      tableId,
-      customerId: cart.customer?._id,
-      items,
-      subtotal: calculated.subtotal,
-      tax: calculated.tax,
-      discount: calculated.totalDiscount,
-      total: calculated.total,
-      status: 'paid',
-      paymentMethodId,
-      source: 'pos',
-    });
-
-    if (res.success) {
-      clearCart(tableId);
-      router.push('/pos');
-    } else {
-      alert('Failed to process payment checkout: ' + res.error);
-    }
-  };
 
   // Close Session flows
   const handleOpenCloseSessionModal = async () => {
+    if (!session) return;
     setShowCloseModal(true);
     setClosingCash('');
     setClosingError('');
     const summary = await getSessionCloseSummary(session._id);
-    setCloseSummary(summary);
+    setCloseSummary(summary as unknown as CloseSumm);
   };
 
   const handleCloseSessionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!session) return;
     setClosingError('');
     const amt = parseFloat(closingCash);
     if (isNaN(amt) || amt < 0) {
@@ -740,15 +698,11 @@ export default function OrderViewPage() {
             ) : (
               <div className="flex flex-col gap-2">
                 {paymentMethods.map((method) => {
-                  let Icon = DollarSign;
-                  if (method.type === 'card') Icon = CreditCard;
-                  if (method.type === 'upi') Icon = QrCode;
-
                   return (
                     <button
                       key={method._id}
                       disabled={cart.items.length === 0}
-                      onClick={() => handlePayment(method.type, method._id)}
+                      onClick={() => handlePayment()}
                       className={`w-full py-3.5 rounded-2xl flex items-center justify-between px-4 font-bold text-sm transition-all shadow-xs cursor-pointer border
                         ${
                           cart.items.length === 0
@@ -758,12 +712,8 @@ export default function OrderViewPage() {
                       `}
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <Icon className="h-4.5 w-4.5 text-primary" />
-                        </div>
                         <span className="capitalize">{method.name}</span>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
                   );
                 })}
@@ -898,55 +848,37 @@ export default function OrderViewPage() {
         </div>
       )}
 
-      {/* MODAL 3: UPI QR scan-to-pay */}
-      {showUpiQrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-xs" onClick={() => setShowUpiQrModal(false)} />
-          <div className="relative z-10 w-full max-w-sm bg-card border border-border rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center gap-4">
-            <h3 className="text-base font-bold text-foreground flex items-center gap-1.5">
-              <QrCode className="h-5 w-5 text-primary animate-pulse" />
-              <span>Scan UPI Payout QR</span>
-            </h3>
-
-            <span className="text-xs text-muted-foreground">
-              Please scan QR code to trigger transaction of <strong className="text-foreground">₹{calculated.total.toFixed(2)}</strong> via UPI.
-            </span>
-
-            <div className="h-48 w-48 border border-border bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-inner p-1">
-              {upiQrUrl ? (
-                <Image src={upiQrUrl} alt="UPI QR Pay Code" fill className="object-contain" />
-              ) : (
-                <span className="text-xs text-muted-foreground animate-pulse">Rendering QR code...</span>
-              )}
-            </div>
-
-            <div className="text-xs font-mono bg-muted p-2 rounded-lg border border-border max-w-full truncate">
-              {activeUpiMethod?.upiId}
-            </div>
-
-            <div className="flex gap-2.5 w-full mt-2">
-              <button
-                type="button"
-                onClick={() => setShowUpiQrModal(false)}
-                className="flex-1 py-2.5 border border-border hover:bg-muted text-muted-foreground text-xs font-semibold rounded-xl cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setShowUpiQrModal(false);
-                  if (activeUpiMethod) {
-                    await submitPaidOrder(activeUpiMethod._id);
-                  }
-                }}
-                className="flex-1 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold py-2.5 rounded-xl text-xs cursor-pointer shadow-md shadow-primary/10"
-              >
-                Verify Settlement
-              </button>
-            </div>
-          </div>
-        </div>
+      {showCheckoutModal && (
+        <CheckoutModal
+          tableId={tableId}
+          onClose={() => setShowCheckoutModal(false)}
+          onSuccess={() => {
+            clearCart(tableId);
+            router.push('/pos');
+          }}
+          methods={paymentMethods}
+          calculateCartDetails={calculateCartDetails}
+          createOrder={async (status, methodId) => {
+            const res = await createOrderAction({
+              tableId,
+              customerId: cart.customer?._id,
+              items: cart.items.map((item) => ({
+                productId: item.productId,
+                qty: item.qty,
+                price: item.price,
+                discount: item.discount,
+              })),
+              subtotal: calculated.subtotal,
+              tax: calculated.tax,
+              discount: calculated.totalDiscount,
+              total: calculated.total,
+              status,
+              paymentMethodId: methodId,
+              source: 'pos',
+            });
+            return res as { success: boolean; order?: Record<string, unknown>; error?: string };
+          }}
+        />
       )}
 
       {/* MODAL 4: Close Session Summary Panel */}

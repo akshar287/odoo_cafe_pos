@@ -42,7 +42,7 @@ export default function BackendLayout({ children }: { children: React.ReactNode 
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleSignOut = () => {
-    signOut(() => window.location.href = '/sign-in');
+    signOut({ redirectUrl: '/sign-in' });
   };
 
   return (

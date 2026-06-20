@@ -38,7 +38,11 @@ export default function PaymentMethodPage() {
   const loadMethods = async () => {
     setLoading(true);
     const list = await getPaymentMethods();
-    setMethods(list);
+    setMethods(list.map((c: { _id: { toString: () => string }, name: string, type: string, active: boolean, upiId?: string }) => ({
+      ...c,
+      _id: c._id.toString(),
+      type: c.type as 'cash' | 'card' | 'upi'
+    })));
     setLoading(false);
   };
 

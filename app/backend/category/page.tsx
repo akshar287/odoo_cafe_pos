@@ -31,7 +31,10 @@ export default function CategoryPage() {
   const loadCategories = async () => {
     setLoading(true);
     const list = await getCategories();
-    setCategories(list);
+    setCategories(list.map((c: { _id: { toString: () => string }, name: string, color: string }) => ({
+      ...c,
+      _id: c._id.toString()
+    })));
     setLoading(false);
   };
 

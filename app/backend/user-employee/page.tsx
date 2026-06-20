@@ -48,7 +48,10 @@ export default function UserEmployeePage() {
   const loadEmployees = async () => {
     setLoading(true);
     const list = await getEmployeesAction();
-    setEmployees(list);
+    setEmployees(list.map((c: { _id: { toString: () => string } }) => ({
+      ...c,
+      _id: c._id.toString()
+    } as unknown as Employee)));
     setLoading(false);
   };
 
