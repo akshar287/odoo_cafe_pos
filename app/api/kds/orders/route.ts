@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Order from '@/models/Order';
 import Session from '@/models/Session';
+import Table from '@/models/Table';
+import Product from '@/models/Product';
+
+// Ensure models are registered to prevent Mongoose MissingSchemaError during populate
+[Product, Table].forEach(() => {});
 
 export async function GET() {
   try {
